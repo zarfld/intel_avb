@@ -17,6 +17,7 @@ This directory provides Intel-specific AVB/TSN register access and hardware abst
 - Enhanced Windows compatibility (MMIO, timestamping).
 - Updated hardware test results and feasibility scores.
 - Documentation and API examples improved.
+- **Added comprehensive specification library in `spec/` directory**
 
 ## Public API (`intel.h`)
 
@@ -115,6 +116,17 @@ Each device reports its capabilities through capability flags:
 - Function pointers: runtime dispatch to device-specific handlers
 - Capability-based: features enabled based on device capabilities
 - Extensible: easy to add new devices or features
+
+## Official Documentation
+
+Complete Intel hardware specifications are available in the `spec/` directory:
+- **I210 Family**: Complete datasheets, specification updates, automotive variants
+- **I217 Family**: Controller datasheets and programming guides  
+- **I219 Family**: Ethernet connection specifications
+- **I225/I226 Family**: Latest specification updates and product briefs
+- **Integration Guides**: Intel-Altera and multi-vendor compatibility
+
+See [`spec/README.md`](spec/README.md) for a complete documentation index.
 
 ## License
 
