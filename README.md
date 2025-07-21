@@ -4,20 +4,30 @@ This directory provides Intel-specific AVB/TSN register access and hardware abst
 
 ## Supported Devices & Status (July 2025)
 
-| Device      | Features                                  | Implementation Status      | Hardware Test Results         |
+| Device      | Features                                  | Implementation Status      | Hardware Access Status        |
 |-------------|-------------------------------------------|---------------------------|-------------------------------|
-| **I225/I226** | TSN (Qbv, Qbu, PTM), gPTP, 2.5G, MMIO   | **Production Ready**      | All features validated, stable|
-| **I219**    | MDIO, basic IEEE 1588 timestamping        | **Ready**                 | MDIO & timestamping verified  |
-| **I210**    | MMIO, basic IEEE 1588 timestamping        | **Basic Implementation**  | Register access, timestamping OK; needs optimization |
+| **I225/I226** | TSN (Qbv, Qbu, PTM), gPTP, 2.5G, MMIO   | ⚠️ **Architecture Complete** | **Simulated** - needs real MMIO |
+| **I219**    | MDIO, basic IEEE 1588 timestamping        | ⚠️ **Architecture Complete** | **Simulated** - needs real MDIO |
+| **I210**    | MMIO, basic IEEE 1588 timestamping        | ⚠️ **Stub Implementation**   | **TODO** - needs MMIO mapping |
+
+### Status Legend
+- ✅ **Production Ready**: Real hardware access implemented and tested
+- ⚠️ **Architecture Complete**: Full API design, but simulated hardware access
+- ⚠️ **Stub Implementation**: Basic structure, missing hardware interface
+- ❌ **Not Implemented**: No implementation exists
+
+**IMPORTANT**: Current implementation uses extensive simulation and stub code. Real hardware access is required for production use.
+
+📋 **See [TODO.md](TODO.md) for detailed implementation roadmap and required work.**
 
 ## Recent Changes
 
 - Refactored register abstraction for all supported Intel NICs.
 - Improved TSN configuration API (Qbv, Qbu, PTM).
 - Enhanced Windows compatibility (MMIO, timestamping).
-- Updated hardware test results and feasibility scores.
-- Documentation and API examples improved.
 - **Added comprehensive specification library in `spec/` directory**
+- ⚠️ **CRITICAL**: Identified extensive simulation/stub code requiring real hardware implementation
+- **Created detailed TODO.md with implementation roadmap**
 
 ## Public API (`intel.h`)
 
@@ -40,19 +50,28 @@ int intel_read_reg(device_t *dev, uint32_t offset, uint32_t *value);
 int intel_write_reg(device_t *dev, uint32_t offset, uint32_t value);
 ```
 
-## Hardware Testing Results
+## Current Implementation Status
 
-- **I225/I226**: All TSN features (Qbv, Qbu, PTM), timestamping, and MMIO verified on Windows 11 and Ubuntu 22.04.  
-  - Feasibility Score: 305/100 (Exceeds expectations)
-  - Status: **Production Ready**
-- **I219**: MDIO access and IEEE 1588 timestamping verified on multiple platforms.
-  - Feasibility Score: 90/100
-  - Status: **Ready**
-- **I210**: Register access and basic timestamping functional; further optimization planned.
-  - Feasibility Score: 70/100
-  - Status: **Basic Implementation**
+⚠️ **CRITICAL**: The current implementation contains extensive simulation and stub code that must be replaced with real hardware access before production use.
 
-> **Note:** "Production Ready" means all features have passed hardware-in-the-loop tests on multiple platforms (Windows & Linux). "Ready" means core features validated, but further integration may be needed. "Basic Implementation" means functional, but not fully optimized or validated for all use cases.
+### What Works (Simulated)
+- **Device Detection**: Windows Device Manager integration for I219-LM
+- **API Architecture**: Complete, well-designed public interface  
+- **Register Patterns**: Correct register layouts and bit patterns
+- **Error Handling**: Comprehensive error checking and validation
+
+### What Needs Real Implementation
+- **PCI Configuration Access**: Currently returns hardcoded values (`0xF0000000`, `0x12345678`)
+- **MMIO Operations**: All memory-mapped I/O is simulated with fake responses
+- **MDIO/PHY Access**: Ethernet PHY communication is completely faked
+- **IEEE 1588 Timestamping**: Timestamp registers return simulated values
+- **TSN Features**: Time-aware shaping and frame preemption are stubbed
+
+### Testing Status
+- ✅ **Architecture Validation**: API design verified through simulation
+- ⚠️ **Device Detection**: Real I219-LM hardware identified successfully
+- ❌ **Hardware Register Access**: No real hardware operations implemented
+- ❌ **Production Testing**: Cannot be production-tested without real hardware access
 
 ## Build Instructions
 

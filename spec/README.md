@@ -24,13 +24,19 @@ This directory contains Intel-specific documentation related to the Intel AVB im
 
 ## Device Support Matrix
 
-| Controller | Implementation Status | Documentation |
-|------------|----------------------|---------------|
-| **I210**   | Basic Implementation | Complete official specs |
-| **I217**   | Not Implemented      | Complete official specs |
-| **I219**   | Ready                | Complete official specs |
-| **I225**   | Production Ready     | Complete official specs + updates |
-| **I226**   | Production Ready     | Complete official specs |
+| Controller | Implementation Status | Documentation | Hardware Access |
+|------------|----------------------|---------------|-----------------|
+| **I210**   | ⚠️ **Stub Implementation** | Complete official specs | TODO: Real MMIO mapping |
+| **I217**   | ❌ **Not Implemented** | Complete official specs | TODO: Full implementation |
+| **I219**   | ⚠️ **Simulation Only** | Complete official specs | TODO: Real MDIO/Register access |
+| **I225**   | ⚠️ **Simulation Only** | Complete official specs + updates | TODO: Real TSN/MMIO implementation |
+| **I226**   | ⚠️ **Simulation Only** | Complete official specs | TODO: Real TSN/MMIO implementation |
+
+### Implementation Status Legend
+- ✅ **Production Ready**: Real hardware access, fully tested
+- ⚠️ **Simulation Only**: Architecture complete, but uses fake/stub hardware access
+- ⚠️ **Stub Implementation**: Basic structure, missing real hardware interface
+- ❌ **Not Implemented**: No implementation exists
 
 ## Usage Notes
 
