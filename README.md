@@ -149,7 +149,7 @@ See [`spec/README.md`](spec/README.md) for a complete documentation index.
 
 ## License
 
-BSD 3-Clause License - Copyright (c) 2025, Intel Corporation
+BSD 3-Clause License - Copyright (c) 2025
 
 ---
 
