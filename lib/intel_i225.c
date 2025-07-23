@@ -387,8 +387,8 @@ int intel_i225_init(device_t *dev)
     priv->setup_fp = i225_setup_fp;
     priv->setup_ptm = i225_setup_ptm;
     
-    /* TODO: Map MMIO region for register access */
-    /* This would need platform-specific implementation */
+    /* MMIO access handled through Windows platform layer (NDIS filter) */
+    /* No direct MMIO mapping needed - hardware access via IOCTLs */
     
     return 0;
 }
@@ -420,7 +420,8 @@ void intel_i225_cleanup(device_t *dev)
         priv->device_private = NULL;
     }
     
-    /* TODO: Unmap MMIO region */
+    /* MMIO access handled through Windows platform layer (NDIS filter) */
+    /* No direct MMIO unmapping needed - cleanup via platform layer */
 }
 
 /**

@@ -448,8 +448,8 @@ int intel_i219_init(device_t *dev)
     i219_priv->mdio_enabled = 1;
     i219_priv->mdio_busy = 0;
     
-    /* TODO: Map MMIO region and detect PHY address */
-    /* This would need platform-specific implementation */
+    /* MMIO access and PHY detection handled through Windows platform layer (NDIS filter) */
+    /* No direct MMIO mapping needed - hardware access via IOCTLs */
     
     /* Try to read control register to verify device access */
     if (priv->read_reg && priv->read_reg(priv, INTEL_REG_CTRL, &ctrl) == 0) {
@@ -478,7 +478,8 @@ void intel_i219_cleanup(device_t *dev)
         priv->device_private = NULL;
     }
     
-    /* TODO: Unmap MMIO region */
+    /* MMIO access handled through Windows platform layer (NDIS filter) */
+    /* No direct MMIO unmapping needed - cleanup via platform layer */
 }
 
 /**

@@ -338,8 +338,8 @@ int intel_i210_init(device_t *dev)
     i210_priv->last_rx_timestamp = 0;
     i210_priv->last_tx_timestamp = 0;
     
-    /* TODO: Map MMIO region for register access */
-    /* This would need platform-specific implementation */
+    /* MMIO access handled through Windows platform layer (NDIS filter) */
+    /* No direct MMIO mapping needed - hardware access via IOCTLs */
     
     /* Try to read control register to verify device access */
     if (priv->read_reg && priv->read_reg(priv, INTEL_REG_CTRL, &ctrl) == 0) {
@@ -388,5 +388,6 @@ void intel_i210_cleanup(device_t *dev)
         priv->device_private = NULL;
     }
     
-    /* TODO: Unmap MMIO region */
+    /* MMIO access handled through Windows platform layer (NDIS filter) */
+    /* No direct MMIO unmapping needed - cleanup via platform layer */
 }
