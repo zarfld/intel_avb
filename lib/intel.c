@@ -78,6 +78,9 @@ int intel_attach(char *dev_path, device_t *pdev)
     case INTEL_DEVICE_I210:
         ret = intel_i210_init(pdev);
         break;
+    case INTEL_DEVICE_I217:
+        ret = intel_i217_init(pdev);
+        break;
     case INTEL_DEVICE_I219:
         ret = intel_i219_init(pdev);
         break;
@@ -151,6 +154,9 @@ int intel_detach(device_t *dev)
     switch (dev->device_type) {
     case INTEL_DEVICE_I210:
         intel_i210_cleanup(dev);
+        break;
+    case INTEL_DEVICE_I217:
+        intel_i217_cleanup(dev);
         break;
     case INTEL_DEVICE_I219:
         intel_i219_cleanup(dev);

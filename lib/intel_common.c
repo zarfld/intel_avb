@@ -81,6 +81,12 @@ static const struct intel_device_info intel_devices[] = {
     { 0x1537, INTEL_DEVICE_I210, 
       INTEL_CAP_BASIC_1588 | INTEL_CAP_MMIO,
       "I210-IS", "Intel I210-IS Gigabit Network Connection" },
+    { 0x1538, INTEL_DEVICE_I210, 
+      INTEL_CAP_BASIC_1588 | INTEL_CAP_MMIO,
+      "I210-SGMII", "Intel I210 SGMII Gigabit Network Connection" },
+    { 0x157B, INTEL_DEVICE_I210, 
+      INTEL_CAP_BASIC_1588 | INTEL_CAP_MMIO,
+      "I210-F", "Intel I210 Flash-less Gigabit Network Connection" },
     
     /* I217 Series - Lynx Point PHY with dual PCIe+SMBus interface */
     { 0x153a, INTEL_DEVICE_I217, 
@@ -109,6 +115,13 @@ static const struct intel_device_info intel_devices[] = {
     { 0x0dc7, INTEL_DEVICE_I219, 
       INTEL_CAP_BASIC_1588 | INTEL_CAP_MDIO,
       "I219-LM", "Intel I219-LM Gigabit Network Connection (22)" },
+    /* Additional I219 variants */
+    { 0x1570, INTEL_DEVICE_I219, 
+      INTEL_CAP_BASIC_1588 | INTEL_CAP_MDIO,
+      "I219-V", "Intel I219-V Gigabit Network Connection (5)" },
+    { 0x15e3, INTEL_DEVICE_I219, 
+      INTEL_CAP_BASIC_1588 | INTEL_CAP_MDIO,
+      "I219-LM", "Intel I219-LM Gigabit Network Connection (6)" },
     
     /* I225 Series */
     { 0x15f2, INTEL_DEVICE_I225, 
@@ -119,16 +132,24 @@ static const struct intel_device_info intel_devices[] = {
       INTEL_CAP_BASIC_1588 | INTEL_CAP_ENHANCED_TS | INTEL_CAP_TSN_TAS | 
       INTEL_CAP_TSN_FP | INTEL_CAP_PCIe_PTM | INTEL_CAP_2_5G | INTEL_CAP_MMIO,
       "I225-V", "Intel I225-V 2.5 Gigabit Network Connection" },
+    { 0x0d9f, INTEL_DEVICE_I225, 
+      INTEL_CAP_BASIC_1588 | INTEL_CAP_ENHANCED_TS | INTEL_CAP_TSN_TAS | 
+      INTEL_CAP_TSN_FP | INTEL_CAP_PCIe_PTM | INTEL_CAP_2_5G | INTEL_CAP_MMIO,
+      "I225-IT", "Intel I225-IT 2.5 Gigabit Network Connection" },
     
     /* I226 Series */
     { 0x125b, INTEL_DEVICE_I226, 
       INTEL_CAP_BASIC_1588 | INTEL_CAP_ENHANCED_TS | INTEL_CAP_TSN_TAS | 
-      INTEL_CAP_TSN_FP | INTEL_CAP_PCIe_PTM | INTEL_CAP_2_5G | INTEL_CAP_MMIO,
+      INTEL_CAP_TSN_FP | INTEL_CAP_PCIe_PTM | INTEL_CAP_2_5G | INTEL_CAP_MMIO | INTEL_CAP_EEE,
       "I226-LM", "Intel I226-LM 2.5 Gigabit Network Connection" },
     { 0x125c, INTEL_DEVICE_I226, 
       INTEL_CAP_BASIC_1588 | INTEL_CAP_ENHANCED_TS | INTEL_CAP_TSN_TAS | 
-      INTEL_CAP_TSN_FP | INTEL_CAP_PCIe_PTM | INTEL_CAP_2_5G | INTEL_CAP_MMIO,
+      INTEL_CAP_TSN_FP | INTEL_CAP_PCIe_PTM | INTEL_CAP_2_5G | INTEL_CAP_MMIO | INTEL_CAP_EEE,
       "I226-V", "Intel I226-V 2.5 Gigabit Network Connection" },
+    { 0x125d, INTEL_DEVICE_I226,
+      INTEL_CAP_BASIC_1588 | INTEL_CAP_ENHANCED_TS | INTEL_CAP_TSN_TAS | 
+      INTEL_CAP_TSN_FP | INTEL_CAP_PCIe_PTM | INTEL_CAP_2_5G | INTEL_CAP_MMIO | INTEL_CAP_EEE,
+      "I226-IT", "Intel I226-IT 2.5 Gigabit Network Connection" },
     
     /* Terminator */
     { 0, INTEL_DEVICE_UNKNOWN, 0, NULL, NULL }

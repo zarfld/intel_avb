@@ -38,15 +38,82 @@
 extern "C" {
 #endif
 
+/* Windows kernel compatibility layer */
+#ifdef _WIN32
+#ifdef INTEL_WIN32_KERNEL_MODE
+
+/* Windows kernel mode compatibility */
+/* Define POSIX error codes that are missing in Windows kernel */
+#ifndef ENOTSUP
+#define ENOTSUP         129     /* Operation not supported */
+#endif
+#ifndef ETIMEDOUT
+#define ETIMEDOUT       110     /* Connection timed out */
+#endif
+#ifndef EINVAL
+#define EINVAL          22      /* Invalid argument */
+#endif
+#ifndef EBUSY
+#define EBUSY           16      /* Device or resource busy */
+#endif
+#ifndef EIO
+#define EIO             5       /* I/O error */
+#endif
+#ifndef ENOMEM
+#define ENOMEM          12      /* Out of memory */
+#endif
+
+/* Use Windows kernel types instead of standard C types */
+typedef unsigned char uint8_t;
+typedef unsigned short uint16_t;  
+typedef unsigned long uint32_t;
+typedef unsigned long long uint64_t;
+typedef signed char int8_t;
+typedef short int16_t;
+typedef long int32_t;
+typedef long long int64_t;
+
+/* Define size_t for kernel mode */
+#ifndef _SIZE_T_DEFINED
+#define _SIZE_T_DEFINED
+typedef unsigned long long size_t;
+#endif
+
+/* Simple snprintf replacement for kernel mode */
+static inline int kernel_snprintf(char *buffer, size_t size, const char *format, ...)
+{
+    /* For now, just clear the buffer - the Intel library only uses this for device info strings */
+    if (buffer && size > 0) {
+        buffer[0] = '\0';
+    }
+    return 0;
+}
+
+#define snprintf kernel_snprintf
+
+/* clockid_t definition */
+typedef int clockid_t;
+
+/* timespec structure for kernel mode */
+struct timespec {
+    long tv_sec;
+    long tv_nsec;
+};
+
+#else
+/* Windows user mode - use standard headers */
 #include <sys/types.h>
 #include <stdint.h>
 #include <time.h>
-
-/* Define clockid_t if not available */
-#ifndef _WIN32
-#include <unistd.h>
-#else
 typedef int clockid_t;
+#endif
+
+#else
+/* Non-Windows platforms */
+#include <sys/types.h>
+#include <stdint.h>
+#include <time.h>
+#include <unistd.h>
 #endif
 
 /* Intel Vendor ID */

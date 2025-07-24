@@ -124,12 +124,14 @@ int intel_validate_packet(struct intel_packet *packet);
 
 /* Device-specific initialization functions */
 int intel_i210_init(device_t *dev);
+int intel_i217_init(device_t *dev);
 int intel_i219_init(device_t *dev);
 int intel_i225_init(device_t *dev);
 int intel_i226_init(device_t *dev);
 
 /* Device-specific cleanup functions */
 void intel_i210_cleanup(device_t *dev);
+void intel_i217_cleanup(device_t *dev);
 void intel_i219_cleanup(device_t *dev);
 void intel_i225_cleanup(device_t *dev);
 void intel_i226_cleanup(device_t *dev);

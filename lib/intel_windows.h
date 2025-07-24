@@ -10,8 +10,14 @@
 #ifndef _INTEL_WINDOWS_H_DEFINED_
 #define _INTEL_WINDOWS_H_DEFINED_
 
+#ifdef INTEL_WIN32_KERNEL_MODE
+/* Kernel mode - use NDIS types */
+#include "intel.h"
+#else
+/* User mode - use Windows types */
 #include <windows.h>
 #include "intel.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,8 +30,13 @@ struct platform_ops {
     void (*cleanup)(device_t *dev);
     
     /* PCI configuration space access */
+#ifdef INTEL_WIN32_KERNEL_MODE
+    int (*pci_read_config)(device_t *dev, uint32_t offset, uint32_t *value);
+    int (*pci_write_config)(device_t *dev, uint32_t offset, uint32_t value);
+#else
     int (*pci_read_config)(device_t *dev, DWORD offset, DWORD *value);
     int (*pci_write_config)(device_t *dev, DWORD offset, DWORD value);
+#endif
     
     /* MMIO register access */
     int (*mmio_read)(device_t *dev, uint32_t offset, uint32_t *value);
