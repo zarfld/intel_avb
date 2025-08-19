@@ -1,0 +1,3 @@
+[submodule "spec/intel-ethernet-regs"]
+	path = spec/intel-ethernet-regs
+	url = https://github.com/zarfld/intel-ethernet-regs.git

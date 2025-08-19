@@ -9,6 +9,10 @@ param(
 
 Write-Host "Building Intel AVB HAL Library for Windows..." -ForegroundColor Green
 
+# Ensure we build from the script directory (so relative paths work)
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Set-Location -LiteralPath $ScriptDir
+
 # Check for Visual Studio installation
 $vsPath = "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
 if (-not (Test-Path $vsPath)) {
@@ -27,9 +31,9 @@ if (-not (Test-Path "build")) {
 }
 
 # Set compile flags
-$cflags = "/O2 /W3 /D_CRT_SECURE_NO_WARNINGS /I. /I..\..\..\lib\common"
+$cflags = "/O2 /W3 /D_CRT_SECURE_NO_WARNINGS /I."
 if ($Debug) {
-    $cflags = "/Od /Zi /W3 /D_CRT_SECURE_NO_WARNINGS /I. /I..\..\..\lib\common"
+    $cflags = "/Od /Zi /W3 /D_CRT_SECURE_NO_WARNINGS /I."
 }
 
 # Source files
@@ -43,7 +47,7 @@ try {
     # Start a new process with VS environment
     $buildScript = @"
 call "$vsPath"
-cd "$PWD"
+cd /d "$ScriptDir"
 
 echo Compiling source files...
 "@

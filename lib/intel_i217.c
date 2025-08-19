@@ -45,6 +45,7 @@
 
 #include "intel.h"
 #include "intel_private.h"
+#include "../spec/intel-ethernet-regs/gen/i217_regs.h" // Single source of truth for I217 register map
 
 /* I217 specific register definitions */
 #define I217_REG_SYSTIMH         0x0B604  /* System Time High */

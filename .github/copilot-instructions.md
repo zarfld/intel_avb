@@ -30,10 +30,12 @@
 ## Project Overview
 This repository provides Intel-specific AVB/TSN register access and hardware abstraction for OpenAvnu, supporting I210/I219/I225/I226 Ethernet controllers. The codebase is structured for direct register access, timestamping, and TSN feature configuration for real-time media streaming.
 
+
 ## Architecture & Key Components
-- **lib/**: Core hardware abstraction layer. Contains device-specific implementations (`intel_i210.c`, `intel_i219.c`, `intel_i225.c`, etc.), common logic (`intel_common.c`), and unified API (`intel.h`).
+- **lib/**: Core hardware abstraction layer. Contains device-specific implementations (`intel_i210.c`, `intel_i217.c`, `intel_i219.c`, `intel_i225.c`, `intel_i226.c`), common logic (`intel_common.c`), and unified API (`intel.h`).
 - **driver/**: Contains test and build scripts, test drivers, and Windows-specific integration code.
-- **spec/**: Official Intel datasheets and specification updates. Always reference these for register definitions and hardware details.
+- **spec/**: Official Intel datasheets, specification updates, and the authoritative register header submodule.
+  - **spec/intel-ethernet-regs/**: Git submodule providing auto-generated register headers (`gen/i210_regs.h`, `gen/i217_regs.h`, etc.) for each adapter. These headers are the single source of truth for all device-specific register maps. Always include and reference these headers in device implementations.
 
 ## Developer Workflows
 - **Build (Windows):**
@@ -47,7 +49,6 @@ This repository provides Intel-specific AVB/TSN register access and hardware abs
   - Most device access is currently simulated/stubbed. Real hardware access is required for production.
   - See `TODO.md` for roadmap and missing hardware features.
 
-## Project-Specific Patterns & Conventions
 - **Unified API:** All device operations use the interface in `intel.h`. Example:
   ```c
   int intel_probe(device_t *dev);
@@ -57,6 +58,16 @@ This repository provides Intel-specific AVB/TSN register access and hardware abs
   int intel_mdio_read(device_t *dev, uint32_t page, uint32_t reg, uint16_t *value);
   int intel_read_reg(device_t *dev, uint32_t offset, uint32_t *value);
   ```
+
+- **Register Map Source of Truth:**
+  - Always use the headers from `spec/intel-ethernet-regs/gen/` (e.g., `i210_regs.h`, `i219_regs.h`) for adapter-specific register definitions.
+  - Do not duplicate register definitions in device source files. Include the appropriate header for each device:
+    ```c
+    #include "../spec/intel-ethernet-regs/gen/i210_regs.h" // I210
+    #include "../spec/intel-ethernet-regs/gen/i219_regs.h" // I219
+    // ...etc
+    ```
+  - If a register is missing, update the submodule and regenerate headers rather than adding local definitions.
 - **Device Support Matrix:** Implementation status varies by device. Reference `README.md` and `spec/README.md` for current support and limitations.
 - **Windows Integration:** Windows-specific code is in `intel_windows.c` and related scripts. Device detection and register access may differ from Linux.
 - **Specification-Driven Development:** Always consult `spec/` documents for register layouts, bit patterns, and hardware features before implementing or debugging.

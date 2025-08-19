@@ -5,6 +5,9 @@ REM This script sets up the Visual Studio environment and builds the Intel HAL l
 
 echo Building Intel AVB HAL Library for Windows...
 
+REM Ensure we run from this script's directory for relative paths
+pushd %~dp0
+
 REM Setup Visual Studio 2022 environment
 call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
 
@@ -13,11 +16,11 @@ if not exist "build" mkdir build
 
 REM Compile source files
 echo Compiling source files...
-cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS /I. /I..\..\..\lib\common intel.c /Fo:build\intel.obj
-cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS /I. /I..\..\..\lib\common intel_common.c /Fo:build\intel_common.obj
-cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS /I. /I..\..\..\lib\common intel_i210.c /Fo:build\intel_i210.obj
-cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS /I. /I..\..\..\lib\common intel_i219.c /Fo:build\intel_i219.obj
-cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS /I. /I..\..\..\lib\common intel_i225.c /Fo:build\intel_i225.obj
+cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS /I. intel.c /Fo:build\intel.obj
+cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS /I. intel_common.c /Fo:build\intel_common.obj
+cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS /I. intel_i210.c /Fo:build\intel_i210.obj
+cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS /I. intel_i219.c /Fo:build\intel_i219.obj
+cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS /I. intel_i225.c /Fo:build\intel_i225.obj
 
 REM Create static library
 echo Creating static library...
@@ -40,4 +43,4 @@ echo   build\intel_avb.lib   - Static library
 echo   build\intel_avb.dll   - Dynamic library  
 echo   build\test_intel.exe  - Test program
 echo.
-pause
+popd

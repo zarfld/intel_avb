@@ -38,6 +38,7 @@
 
 #include "intel.h"
 #include "intel_private.h"
+#include "../spec/intel-ethernet-regs/gen/i210_regs.h" // Single source of truth for I210 register map
 
 /* I210 specific register definitions */
 #define I210_REG_TSYNCRXCTL      0x0B620  /* Rx Time Sync Control */

@@ -38,6 +38,7 @@
 
 #include "intel.h"
 #include "intel_private.h"
+#include "../spec/intel-ethernet-regs/gen/i225_regs.h" // Single source of truth for I225 register map
 
 /* I225/I226 specific register definitions */
 #define I225_REG_TAS_CONFIG_0    0x8604  /* Time Aware Shaper Config 0 */

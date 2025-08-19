@@ -45,6 +45,7 @@
 
 #include "intel.h"
 #include "intel_private.h"
+#include "../spec/intel-ethernet-regs/gen/i219_regs.h" // Single source of truth for I219 register map
 
 /* I219 specific register definitions */
 #define I219_REG_MDIC_DATA_MASK  0x0000FFFF
