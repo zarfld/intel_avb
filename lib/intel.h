@@ -264,6 +264,14 @@ int intel_i217_read_and_ack_interrupts(device_t *dev, uint32_t *icr, int ack);
 int intel_i225_read_and_ack_interrupts(device_t *dev, uint32_t *eicr, uint32_t *icr, int ack);
 int intel_i226_read_and_ack_interrupts(device_t *dev, uint32_t *eicr, uint32_t *icr, int ack);
 
+/* Interrupt moderation (EITR) helpers */
+/**
+ * Program the interrupt moderation interval (EITR) for a given MSI-X vector.
+ * interval_us: moderation interval in microseconds. 0 disables moderation (immediate interrupts).
+ * Returns 0 on success, negative errno on failure.
+ */
+int intel_set_interrupt_throttle(device_t *dev, unsigned vector, uint16_t interval_us);
+
 #ifdef __cplusplus
 }
 #endif

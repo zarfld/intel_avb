@@ -39,6 +39,7 @@
 
 #include "intel.h"
 #include "intel_private.h"
+#include "intel_windows.h"
 #include "../spec/intel-ethernet-regs/gen/i225_regs.h" // Single source of truth for I225 register map
 #include "../spec/intel-ethernet-regs/gen/i226_regs.h" // Single source of truth for I226 register map
 
@@ -95,6 +96,38 @@ static int i225_write_reg(struct intel_private *priv, uint32_t offset, uint32_t 
     *((volatile uint32_t *)((char *)priv->mmio_base + offset)) = value;
     
     return 0;
+}
+
+/**
+ * @brief Program EITR moderation for a given vector on I225/I226.
+ *
+ * Hardware context: EITR[n] at 0x1680 + 4*n, INTERVAL bits [15:0], COUNTER bits [31:16].
+ * Intel I210/I225/I226 family: 1 µs granularity, write full register with INTERVAL replicated
+ * to both halves to reload the down-counter. See I210 DS 8.8.14; I225 SW Manual 6.3.5.
+ *
+ * @param priv Device private pointer
+ * @param vector MSI-X vector index (0..3 for our use)
+ * @param interval_us Moderation interval in microseconds (0 disables moderation)
+ * @return 0 on success, negative errno on error
+ */
+static int i225_set_eitr(struct intel_private *priv, unsigned vector, uint16_t interval_us)
+{
+    uint32_t off;
+    uint32_t val;
+    if (!priv) return -EINVAL;
+    if (vector > 3) return -EINVAL; /* Our YAML models 4 vectors */
+
+    switch (vector) {
+    case 0: off = I225_EITR0; break;
+    case 1: off = I225_EITR1; break;
+    case 2: off = I225_EITR2; break;
+    case 3: off = I225_EITR3; break;
+    default: return -EINVAL;
+    }
+
+    /* Build value: INTERVAL in [15:0], mirror into COUNTER [31:16] */
+    val = ((uint32_t)interval_us & 0xFFFFu) | (((uint32_t)interval_us & 0xFFFFu) << 16);
+    return i225_write_reg(priv, off, val);
 }
 
 /**
@@ -228,6 +261,26 @@ int intel_i225_read_and_ack_interrupts(device_t *dev, uint32_t *eicr, uint32_t *
     if (!dev || !dev->private_data) return -EINVAL;
     struct intel_private *priv = (struct intel_private *)dev->private_data;
     return i225_read_and_ack_interrupts(priv, eicr, icr, ack);
+}
+
+/**
+ * @brief Public API to set interrupt throttle (EITR) for I225/I226 devices.
+ *
+ * See I210 Section 8.8.14 and I225 SW Manual 6.3.5 for EITR semantics.
+ * This function validates device type and delegates to i225_set_eitr.
+ */
+int intel_set_interrupt_throttle(device_t *dev, unsigned vector, uint16_t interval_us)
+{
+    if (!dev || !dev->private_data) return -EINVAL;
+    switch (dev->device_type) {
+    case INTEL_DEVICE_I225:
+    case INTEL_DEVICE_I226: {
+        struct intel_private *priv = (struct intel_private *)dev->private_data;
+        return i225_set_eitr(priv, vector, interval_us);
+    }
+    default:
+        return -ENOTSUP;
+    }
 }
 
 /**
