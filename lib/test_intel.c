@@ -51,6 +51,29 @@ int main(int argc, char *argv[])
     
     printf("\n");
     
+    /* Test I217 device */
+    printf("Testing I217 device identification:\n");
+    memset(&dev, 0, sizeof(dev));
+    dev.pci_vendor_id = INTEL_VENDOR_ID;
+    dev.pci_device_id = 0x153a; /* I217-LM */
+    ret = intel_probe(&dev);
+    if (ret == 0) {
+        printf("  Device: %s\n", intel_get_device_name(&dev));
+        printf("  Capabilities: 0x%08x\n", intel_get_capabilities(&dev));
+        ret = intel_get_device_info(&dev, info_buffer, sizeof(info_buffer));
+        if (ret == 0) {
+            printf("  Info: %s\n", info_buffer);
+        }
+        printf("  MDIO: %s\n",
+               intel_has_capability(&dev, INTEL_CAP_MDIO) ? "Yes" : "No");
+        printf("  IEEE 1588: %s\n",
+               intel_has_capability(&dev, INTEL_CAP_BASIC_1588) ? "Yes" : "No");
+    } else {
+        printf("  Failed to probe I217 device: %d\n", ret);
+    }
+
+    printf("\n");
+
     /* Test I219 device */
     printf("Testing I219 device identification:\n");
     memset(&dev, 0, sizeof(dev));
