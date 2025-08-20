@@ -35,7 +35,7 @@ REM Compile test program
 echo Compiling test program...
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS /I. test_intel.c /Fo:build\test_intel.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS /I. intel_common.c /Fo:build\test_intel_common.obj
-link /OUT:build\test_intel.exe build\test_intel.obj build\test_intel_common.obj
+link /OUT:build\test_intel.exe build\test_intel.obj build\test_intel_common.obj build\intel_avb.lib
 
 echo Build complete!
 echo.

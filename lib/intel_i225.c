@@ -40,27 +40,7 @@
 #include "intel_private.h"
 #include "../spec/intel-ethernet-regs/gen/i225_regs.h" // Single source of truth for I225 register map
 
-/* I225/I226 specific register definitions */
-#define I225_REG_TAS_CONFIG_0    0x8604  /* Time Aware Shaper Config 0 */
-#define I225_REG_TAS_CONFIG_1    0x8608  /* Time Aware Shaper Config 1 */
-#define I225_REG_TAS_GATE_LIST   0x8610  /* Gate List Base */
-#define I225_REG_FP_CONFIG       0x8700  /* Frame Preemption Config */
-#define I225_REG_FP_STATUS       0x8704  /* Frame Preemption Status */
-#define I225_REG_PTM_CONFIG      0x8800  /* PTM Configuration */
-#define I225_REG_PTM_STATUS      0x8804  /* PTM Status */
-
-/* TAS Control Register bits */
-#define I225_TAS_CTRL_EN         (1 << 0)   /* TAS Enable */
-#define I225_TAS_CTRL_GATE_LIST  (1 << 1)   /* Gate List Ready */
-#define I225_TAS_CTRL_BASE_TIME  (1 << 2)   /* Base Time Valid */
-
-/* Frame Preemption Control bits */
-#define I225_FP_CTRL_EN          (1 << 0)   /* Frame Preemption Enable */
-#define I225_FP_CTRL_VERIFY_DIS  (1 << 1)   /* Disable Verification */
-
-/* PTM Control bits */
-#define I225_PTM_CTRL_EN         (1 << 0)   /* PTM Enable */
-#define I225_PTM_CTRL_AUTO_UPD   (1 << 1)   /* Auto Update */
+/* Bitfields for TAS/FP/PTM are provided by generated header (i225_regs.h) */
 
 /* I225/I226 private data structure */
 struct i225_private {
@@ -122,12 +102,12 @@ static int i225_get_systime(struct intel_private *priv, uint64_t *systime)
     }
     
     /* Read high part first to latch the time */
-    ret = i225_read_reg(priv, INTEL_REG_SYSTIMH, &systimh);
+    ret = i225_read_reg(priv, I225_SYSTIMH, &systimh);
     if (ret < 0) {
         return ret;
     }
     
-    ret = i225_read_reg(priv, INTEL_REG_SYSTIML, &systiml);
+    ret = i225_read_reg(priv, I225_SYSTIML, &systiml);
     if (ret < 0) {
         return ret;
     }
@@ -153,13 +133,13 @@ static int i225_set_systime(struct intel_private *priv, uint64_t systime)
     systimh = (uint32_t)(systime >> 32);
     
     /* Write low part first */
-    ret = i225_write_reg(priv, INTEL_REG_SYSTIML, systiml);
+    ret = i225_write_reg(priv, I225_SYSTIML, systiml);
     if (ret < 0) {
         return ret;
     }
     
     /* Write high part to commit the time */
-    ret = i225_write_reg(priv, INTEL_REG_SYSTIMH, systimh);
+    ret = i225_write_reg(priv, I225_SYSTIMH, systimh);
     if (ret < 0) {
         return ret;
     }
@@ -193,12 +173,53 @@ static int i225_adjust_systime(struct intel_private *priv, int32_t ppb)
     /* Convert to TIMINCA register format */
     timinca = (uint32_t)(incvalue & 0xFFFFFFFF);
     
-    ret = i225_write_reg(priv, INTEL_REG_TIMINCA, timinca);
+    ret = i225_write_reg(priv, I225_TIMINCA, timinca);
     if (ret < 0) {
         return ret;
     }
     
     return 0;
+}
+
+/**
+ * Read and optionally acknowledge I225 interrupts with rc/w1c semantics.
+ * Uses EICR (extended causes) and ICR (legacy causes). Only write back
+ * the observed bits to clear them (rc/w1c).
+ * Reference: I225/I226 external spec (see spec/2407151103... PDF), Interrupts.
+ */
+static int i225_read_and_ack_interrupts(struct intel_private *priv,
+                                        uint32_t *eicr_out,
+                                        uint32_t *icr_out,
+                                        int ack)
+{
+    uint32_t eicr = 0, icr = 0;
+    int ret;
+    if (!priv) return -EINVAL;
+
+    ret = i225_read_reg(priv, I225_EICR, &eicr);
+    if (ret < 0) return ret;
+
+    /* Read ICR as well to capture any legacy causes (e.g., LSC). */
+    ret = i225_read_reg(priv, I225_ICR, &icr);
+    if (ret < 0) return ret;
+
+    if (ack) {
+        /* rc/w1c: write back the exact bits observed to clear */
+        (void)i225_write_reg(priv, I225_ICR, icr);
+        (void)i225_write_reg(priv, I225_EICR, eicr);
+    }
+
+    if (eicr_out) *eicr_out = eicr;
+    if (icr_out) *icr_out = icr;
+    return 0;
+}
+
+/* Public wrapper using device_t for I225/I226 interrupt read/ack */
+int intel_i225_read_and_ack_interrupts(device_t *dev, uint32_t *eicr, uint32_t *icr, int ack)
+{
+    if (!dev || !dev->private_data) return -EINVAL;
+    struct intel_private *priv = (struct intel_private *)dev->private_data;
+    return i225_read_and_ack_interrupts(priv, eicr, icr, ack);
 }
 
 /**
@@ -217,25 +238,25 @@ static int i225_setup_tas(struct intel_private *priv, struct tsn_tas_config *con
     i225_priv = (struct i225_private *)priv->device_private;
     
     /* Disable TAS first */
-    ret = i225_read_reg(priv, INTEL_REG_TAS_CTRL, &tas_ctrl);
+    ret = i225_read_reg(priv, I225_TAS_CTRL, &tas_ctrl);
     if (ret < 0) {
         return ret;
     }
     
-    tas_ctrl &= ~I225_TAS_CTRL_EN;
-    ret = i225_write_reg(priv, INTEL_REG_TAS_CTRL, tas_ctrl);
+    tas_ctrl = (uint32_t)I225_TAS_CTRL_SET(tas_ctrl, I225_TAS_CTRL_EN_MASK, I225_TAS_CTRL_EN_SHIFT, 0ULL);
+    ret = i225_write_reg(priv, I225_TAS_CTRL, tas_ctrl);
     if (ret < 0) {
         return ret;
     }
     
     /* Configure base time */
-    ret = i225_write_reg(priv, I225_REG_TAS_CONFIG_0, 
+    ret = i225_write_reg(priv, I225_TAS_CONFIG0, 
                         (uint32_t)(config->base_time_s & 0xFFFFFFFF));
     if (ret < 0) {
         return ret;
     }
     
-    ret = i225_write_reg(priv, I225_REG_TAS_CONFIG_1, 
+    ret = i225_write_reg(priv, I225_TAS_CONFIG1, 
                         (uint32_t)(config->base_time_s >> 32));
     if (ret < 0) {
         return ret;
@@ -243,7 +264,7 @@ static int i225_setup_tas(struct intel_private *priv, struct tsn_tas_config *con
     
     /* Configure cycle time and gate states */
     tas_config = (config->cycle_time_s << 16) | (config->cycle_time_ns >> 16);
-    ret = i225_write_reg(priv, I225_REG_TAS_CONFIG_0 + 8, tas_config);
+    ret = i225_write_reg(priv, I225_TAS_CONFIG0 + 8, tas_config);
     if (ret < 0) {
         return ret;
     }
@@ -252,15 +273,17 @@ static int i225_setup_tas(struct intel_private *priv, struct tsn_tas_config *con
     for (int i = 0; i < 8; i++) {
         uint32_t gate_entry = (config->gate_states[i] << 24) | 
                              config->gate_durations[i];
-        ret = i225_write_reg(priv, I225_REG_TAS_GATE_LIST + (i * 4), gate_entry);
+    ret = i225_write_reg(priv, I225_TAS_GATE_LIST + (i * 4), gate_entry);
         if (ret < 0) {
             return ret;
         }
     }
     
     /* Enable TAS */
-    tas_ctrl |= I225_TAS_CTRL_EN | I225_TAS_CTRL_GATE_LIST | I225_TAS_CTRL_BASE_TIME;
-    ret = i225_write_reg(priv, INTEL_REG_TAS_CTRL, tas_ctrl);
+    tas_ctrl = (uint32_t)I225_TAS_CTRL_SET(tas_ctrl, I225_TAS_CTRL_EN_MASK, I225_TAS_CTRL_EN_SHIFT, 1ULL);
+    tas_ctrl = (uint32_t)I225_TAS_CTRL_SET(tas_ctrl, I225_TAS_CTRL_GATE_LIST_MASK, I225_TAS_CTRL_GATE_LIST_SHIFT, 1ULL);
+    tas_ctrl = (uint32_t)I225_TAS_CTRL_SET(tas_ctrl, I225_TAS_CTRL_BASE_TIME_MASK, I225_TAS_CTRL_BASE_TIME_SHIFT, 1ULL);
+    ret = i225_write_reg(priv, I225_TAS_CTRL, tas_ctrl);
     if (ret < 0) {
         return ret;
     }
@@ -291,23 +314,23 @@ static int i225_setup_fp(struct intel_private *priv, struct tsn_fp_config *confi
     /* Configure frame preemption */
     fp_ctrl = 0;
     if (config->verify_disable) {
-        fp_ctrl |= I225_FP_CTRL_VERIFY_DIS;
+        fp_ctrl = (uint32_t)I225_FP_CONFIG_SET(fp_ctrl, I225_FP_CONFIG_VERIFY_DIS_MASK, I225_FP_CONFIG_VERIFY_DIS_SHIFT, 1ULL);
     }
     
     /* Set preemptable queues (implementation specific) */
-    fp_ctrl |= (config->preemptable_queues << 8);
+    fp_ctrl = (uint32_t)I225_FP_CONFIG_SET(fp_ctrl, I225_FP_CONFIG_PREEMPTABLE_QUEUES_MASK, I225_FP_CONFIG_PREEMPTABLE_QUEUES_SHIFT, (unsigned long long)config->preemptable_queues);
     
     /* Set minimum fragment size */
-    fp_ctrl |= (config->min_fragment_size << 16);
+    fp_ctrl = (uint32_t)I225_FP_CONFIG_SET(fp_ctrl, I225_FP_CONFIG_MIN_FRAGMENT_SIZE_MASK, I225_FP_CONFIG_MIN_FRAGMENT_SIZE_SHIFT, (unsigned long long)config->min_fragment_size);
     
-    ret = i225_write_reg(priv, I225_REG_FP_CONFIG, fp_ctrl);
+    ret = i225_write_reg(priv, I225_FP_CONFIG, fp_ctrl);
     if (ret < 0) {
         return ret;
     }
     
     /* Enable frame preemption */
-    fp_ctrl |= I225_FP_CTRL_EN;
-    ret = i225_write_reg(priv, I225_REG_FP_CONFIG, fp_ctrl);
+    fp_ctrl = (uint32_t)I225_FP_CONFIG_SET(fp_ctrl, I225_FP_CONFIG_EN_MASK, I225_FP_CONFIG_EN_SHIFT, 1ULL);
+    ret = i225_write_reg(priv, I225_FP_CONFIG, fp_ctrl);
     if (ret < 0) {
         return ret;
     }
@@ -338,13 +361,14 @@ static int i225_setup_ptm(struct intel_private *priv, struct ptm_config *config)
     /* Configure PTM */
     ptm_ctrl = 0;
     if (config->enabled) {
-        ptm_ctrl |= I225_PTM_CTRL_EN | I225_PTM_CTRL_AUTO_UPD;
+        ptm_ctrl = (uint32_t)I225_PTM_CONFIG_SET(ptm_ctrl, I225_PTM_CONFIG_EN_MASK, I225_PTM_CONFIG_EN_SHIFT, 1ULL);
+        ptm_ctrl = (uint32_t)I225_PTM_CONFIG_SET(ptm_ctrl, I225_PTM_CONFIG_AUTO_UPD_MASK, I225_PTM_CONFIG_AUTO_UPD_SHIFT, 1ULL);
     }
     
     /* Set clock granularity */
-    ptm_ctrl |= (config->clock_granularity << 8);
+    ptm_ctrl = (uint32_t)I225_PTM_CONFIG_SET(ptm_ctrl, I225_PTM_CONFIG_CLOCK_GRANULARITY_MASK, I225_PTM_CONFIG_CLOCK_GRANULARITY_SHIFT, (unsigned long long)config->clock_granularity);
     
-    ret = i225_write_reg(priv, I225_REG_PTM_CONFIG, ptm_ctrl);
+    ret = i225_write_reg(priv, I225_PTM_CONFIG, ptm_ctrl);
     if (ret < 0) {
         return ret;
     }

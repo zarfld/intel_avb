@@ -260,6 +260,8 @@ int intel_i210_read_and_ack_interrupts(device_t *dev, uint32_t *eicr, uint32_t *
  * Returns 0 on success, negative errno on failure.
  */
 int intel_i217_read_and_ack_interrupts(device_t *dev, uint32_t *icr, int ack);
+/* I225/I226: Extended + legacy interrupt read/ack helper (rc/w1c semantics). */
+int intel_i225_read_and_ack_interrupts(device_t *dev, uint32_t *eicr, uint32_t *icr, int ack);
 
 #ifdef __cplusplus
 }

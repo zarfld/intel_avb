@@ -43,8 +43,28 @@ int main(int argc, char *argv[])
                intel_has_capability(&dev, INTEL_CAP_TSN_TAS) ? "Yes" : "No");
         printf("  TSN FP: %s\n", 
                intel_has_capability(&dev, INTEL_CAP_TSN_FP) ? "Yes" : "No");
-        printf("  PCIe PTM: %s\n", 
-               intel_has_capability(&dev, INTEL_CAP_PCIe_PTM) ? "Yes" : "No");
+     printf("  PCIe PTM: %s\n", 
+         intel_has_capability(&dev, INTEL_CAP_PCIe_PTM) ? "Yes" : "No");
+
+     /* Exercise TAS/FP/PTM setup paths (no-op with simulated HW). */
+     struct tsn_tas_config tas = {0};
+     tas.base_time_s = 1;
+     tas.base_time_ns = 0;
+     tas.cycle_time_s = 0;
+     tas.cycle_time_ns = 1000000; /* 1ms */
+     for (int i = 0; i < 8; ++i) { tas.gate_states[i] = (i & 1); tas.gate_durations[i] = 125000; }
+     (void)intel_setup_time_aware_shaper(&dev, &tas);
+
+     struct tsn_fp_config fp = {0};
+     fp.preemptable_queues = 0x0F; /* queues 0..3 */
+     fp.min_fragment_size = 64;
+     fp.verify_disable = 1;
+     (void)intel_setup_frame_preemption(&dev, &fp);
+
+     struct ptm_config ptm = {0};
+     ptm.enabled = 1;
+     ptm.clock_granularity = 16;
+     (void)intel_setup_ptm(&dev, &ptm);
     } else {
         printf("  Failed to probe I225 device: %d\n", ret);
     }
