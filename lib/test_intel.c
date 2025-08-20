@@ -70,6 +70,48 @@ int main(int argc, char *argv[])
     }
     
     printf("\n");
+
+    /* Test I226 device */
+    printf("Testing I226 device identification:\n");
+    memset(&dev, 0, sizeof(dev));
+    dev.pci_vendor_id = INTEL_VENDOR_ID;
+    dev.pci_device_id = 0x125b; /* I226-LM */
+    ret = intel_probe(&dev);
+    if (ret == 0) {
+        printf("  Device: %s\n", intel_get_device_name(&dev));
+        printf("  Capabilities: 0x%08x\n", intel_get_capabilities(&dev));
+        ret = intel_get_device_info(&dev, info_buffer, sizeof(info_buffer));
+        if (ret == 0) {
+            printf("  Info: %s\n", info_buffer);
+        }
+        printf("  TSN TAS: %s\n", 
+               intel_has_capability(&dev, INTEL_CAP_TSN_TAS) ? "Yes" : "No");
+        printf("  TSN FP: %s\n", 
+               intel_has_capability(&dev, INTEL_CAP_TSN_FP) ? "Yes" : "No");
+        printf("  PCIe PTM: %s\n", 
+               intel_has_capability(&dev, INTEL_CAP_PCIe_PTM) ? "Yes" : "No");
+
+        /* Exercise TAS/FP/PTM setup paths (no-op with simulated HW). */
+        struct tsn_tas_config tas2 = {0};
+        tas2.base_time_s = 2; tas2.base_time_ns = 0; tas2.cycle_time_ns = 2000000; /* 2ms */
+        for (int i = 0; i < 8; ++i) { tas2.gate_states[i] = (i & 1); tas2.gate_durations[i] = 125000; }
+        (void)intel_setup_time_aware_shaper(&dev, &tas2);
+
+        struct tsn_fp_config fp2 = {0}; fp2.preemptable_queues = 0xF0; fp2.min_fragment_size = 64; fp2.verify_disable = 0;
+        (void)intel_setup_frame_preemption(&dev, &fp2);
+
+        struct ptm_config ptm2 = {0}; ptm2.enabled = 1; ptm2.clock_granularity = 8;
+        (void)intel_setup_ptm(&dev, &ptm2);
+
+    /* Interrupt helper smoke: read without ack to verify linkage */
+    uint32_t eicr = 0, icr = 0;
+    (void)intel_i226_read_and_ack_interrupts(&dev, &eicr, &icr, 0);
+    printf("  EICR=0x%08x ICR=0x%08x (no-ack)\n", eicr, icr);
+    } else {
+        printf("  Failed to probe I226 device: %d\n", ret);
+    }
+
+    printf("\n");
     
     /* Test I217 device */
     printf("Testing I217 device identification:\n");

@@ -39,6 +39,7 @@
 #include "intel.h"
 #include "intel_private.h"
 #include "../spec/intel-ethernet-regs/gen/i225_regs.h" // Single source of truth for I225 register map
+#include "../spec/intel-ethernet-regs/gen/i226_regs.h" // Single source of truth for I226 register map
 
 /* Bitfields for TAS/FP/PTM are provided by generated header (i225_regs.h) */
 
@@ -418,13 +419,136 @@ int intel_i225_init(device_t *dev)
     return 0;
 }
 
+/* ========================= I226-specific path (generated macros) ========================= */
+
 /**
- * @brief Initialize I226 device (same as I225)
+ * @brief Get system time from I226 device
+ */
+static int i226_get_systime(struct intel_private *priv, uint64_t *systime)
+{
+    uint32_t systiml, systimh; int ret;
+    if (!priv || !systime) return -EINVAL;
+    ret = i225_read_reg(priv, I226_SYSTIMH, &systimh); if (ret < 0) return ret;
+    ret = i225_read_reg(priv, I226_SYSTIML, &systiml); if (ret < 0) return ret;
+    *systime = ((uint64_t)systimh << 32) | systiml; return 0;
+}
+
+/**
+ * @brief Set system time on I226 device
+ */
+static int i226_set_systime(struct intel_private *priv, uint64_t systime)
+{
+    uint32_t l = (uint32_t)(systime & 0xFFFFFFFF), h = (uint32_t)(systime >> 32);
+    int ret; if (!priv) return -EINVAL;
+    ret = i225_write_reg(priv, I226_SYSTIML, l); if (ret < 0) return ret;
+    return i225_write_reg(priv, I226_SYSTIMH, h);
+}
+
+/**
+ * @brief Adjust system time frequency on I226 device
+ */
+static int i226_adjust_systime(struct intel_private *priv, int32_t ppb)
+{
+    if (!priv) return -EINVAL; uint64_t inc = 4000000000ULL; /* 4ns */
+    if (ppb) { int64_t adj = (int64_t)inc * ppb / 1000000000LL; inc += adj; }
+    return i225_write_reg(priv, I226_TIMINCA, (uint32_t)(inc & 0xFFFFFFFF));
+}
+
+/**
+ * @brief Configure Time Aware Shaper on I226
+ */
+static int i226_setup_tas(struct intel_private *priv, struct tsn_tas_config *config)
+{
+    struct i225_private *p; uint32_t tas_ctrl, tas_cfg; int ret; if (!priv || !priv->device_private || !config) return -EINVAL; p = (struct i225_private *)priv->device_private;
+    ret = i225_read_reg(priv, I226_TAS_CTRL, &tas_ctrl); if (ret < 0) return ret;
+    tas_ctrl = (uint32_t)I226_TAS_CTRL_SET(tas_ctrl, I226_TAS_CTRL_EN_MASK, I226_TAS_CTRL_EN_SHIFT, 0ULL);
+    ret = i225_write_reg(priv, I226_TAS_CTRL, tas_ctrl); if (ret < 0) return ret;
+    ret = i225_write_reg(priv, I226_TAS_CONFIG0, (uint32_t)(config->base_time_s & 0xFFFFFFFF)); if (ret < 0) return ret;
+    ret = i225_write_reg(priv, I226_TAS_CONFIG1, (uint32_t)(config->base_time_s >> 32)); if (ret < 0) return ret;
+    tas_cfg = (config->cycle_time_s << 16) | (config->cycle_time_ns >> 16);
+    ret = i225_write_reg(priv, I226_TAS_CONFIG0 + 8, tas_cfg); if (ret < 0) return ret;
+    for (int i = 0; i < 8; i++) {
+        uint32_t gate_entry = (config->gate_states[i] << 24) | config->gate_durations[i];
+        ret = i225_write_reg(priv, I226_TAS_GATE_LIST + (i * 4), gate_entry); if (ret < 0) return ret;
+    }
+    tas_ctrl = (uint32_t)I226_TAS_CTRL_SET(tas_ctrl, I226_TAS_CTRL_EN_MASK, I226_TAS_CTRL_EN_SHIFT, 1ULL);
+    tas_ctrl = (uint32_t)I226_TAS_CTRL_SET(tas_ctrl, I226_TAS_CTRL_GATE_LIST_MASK, I226_TAS_CTRL_GATE_LIST_SHIFT, 1ULL);
+    tas_ctrl = (uint32_t)I226_TAS_CTRL_SET(tas_ctrl, I226_TAS_CTRL_BASE_TIME_MASK, I226_TAS_CTRL_BASE_TIME_SHIFT, 1ULL);
+    ret = i225_write_reg(priv, I226_TAS_CTRL, tas_ctrl); if (ret < 0) return ret;
+    p->tas_enabled = 1; p->tas_base_time = (config->base_time_s * NSEC_PER_SEC) + config->base_time_ns; p->tas_cycle_time = (config->cycle_time_s * NSEC_PER_SEC) + config->cycle_time_ns; return 0;
+}
+
+/**
+ * @brief Configure Frame Preemption on I226
+ */
+static int i226_setup_fp(struct intel_private *priv, struct tsn_fp_config *config)
+{
+    struct i225_private *p; uint32_t fp = 0; int ret; if (!priv || !priv->device_private || !config) return -EINVAL; p = (struct i225_private *)priv->device_private;
+    if (config->verify_disable) fp = (uint32_t)I226_FP_CONFIG_SET(fp, I226_FP_CONFIG_VERIFY_DIS_MASK, I226_FP_CONFIG_VERIFY_DIS_SHIFT, 1ULL);
+    fp = (uint32_t)I226_FP_CONFIG_SET(fp, I226_FP_CONFIG_PREEMPTABLE_QUEUES_MASK, I226_FP_CONFIG_PREEMPTABLE_QUEUES_SHIFT, (unsigned long long)config->preemptable_queues);
+    fp = (uint32_t)I226_FP_CONFIG_SET(fp, I226_FP_CONFIG_MIN_FRAGMENT_SIZE_MASK, I226_FP_CONFIG_MIN_FRAGMENT_SIZE_SHIFT, (unsigned long long)config->min_fragment_size);
+    ret = i225_write_reg(priv, I226_FP_CONFIG, fp); if (ret < 0) return ret;
+    fp = (uint32_t)I226_FP_CONFIG_SET(fp, I226_FP_CONFIG_EN_MASK, I226_FP_CONFIG_EN_SHIFT, 1ULL);
+    ret = i225_write_reg(priv, I226_FP_CONFIG, fp); if (ret < 0) return ret;
+    p->fp_enabled = 1; p->fp_verify_disabled = config->verify_disable; p->fp_min_fragment_size = config->min_fragment_size; return 0;
+}
+
+/**
+ * @brief Configure PCIe PTM on I226
+ */
+static int i226_setup_ptm(struct intel_private *priv, struct ptm_config *config)
+{
+    struct i225_private *p; uint32_t ptm = 0; int ret; if (!priv || !priv->device_private || !config) return -EINVAL; p = (struct i225_private *)priv->device_private;
+    if (config->enabled) {
+        ptm = (uint32_t)I226_PTM_CONFIG_SET(ptm, I226_PTM_CONFIG_EN_MASK, I226_PTM_CONFIG_EN_SHIFT, 1ULL);
+        ptm = (uint32_t)I226_PTM_CONFIG_SET(ptm, I226_PTM_CONFIG_AUTO_UPD_MASK, I226_PTM_CONFIG_AUTO_UPD_SHIFT, 1ULL);
+    }
+    ptm = (uint32_t)I226_PTM_CONFIG_SET(ptm, I226_PTM_CONFIG_CLOCK_GRANULARITY_MASK, I226_PTM_CONFIG_CLOCK_GRANULARITY_SHIFT, (unsigned long long)config->clock_granularity);
+    ret = i225_write_reg(priv, I226_PTM_CONFIG, ptm); if (ret < 0) return ret;
+    p->ptm_enabled = config->enabled; p->ptm_granularity = config->clock_granularity; return 0;
+}
+
+/**
+ * Read and optionally acknowledge I226 interrupts with rc/w1c semantics.
+ */
+static int i226_read_and_ack_interrupts(struct intel_private *priv,
+                                        uint32_t *eicr_out,
+                                        uint32_t *icr_out,
+                                        int ack)
+{
+    if (!priv) return -EINVAL; uint32_t eicr=0, icr=0; int ret;
+    ret = i225_read_reg(priv, I226_EICR, &eicr); if (ret < 0) return ret;
+    ret = i225_read_reg(priv, I226_ICR, &icr); if (ret < 0) return ret;
+    if (ack) { (void)i225_write_reg(priv, I226_ICR, icr); (void)i225_write_reg(priv, I226_EICR, eicr); }
+    if (eicr_out) *eicr_out = eicr; if (icr_out) *icr_out = icr; return 0;
+}
+
+/* Public wrapper */
+int intel_i226_read_and_ack_interrupts(device_t *dev, uint32_t *eicr, uint32_t *icr, int ack)
+{
+    if (!dev || !dev->private_data) return -EINVAL; struct intel_private *priv = (struct intel_private *)dev->private_data; return i226_read_and_ack_interrupts(priv, eicr, icr, ack);
+}
+
+/**
+ * @brief Initialize I226 device
  */
 int intel_i226_init(device_t *dev)
 {
-    /* I226 uses the same implementation as I225 */
-    return intel_i225_init(dev);
+    struct intel_private *priv; struct i225_private *i_priv;
+    if (!dev || !dev->private_data) return -EINVAL;
+    priv = (struct intel_private *)dev->private_data;
+    i_priv = calloc(1, sizeof(struct i225_private)); if (!i_priv) return -ENOMEM;
+    priv->device_private = i_priv;
+    /* Assign I226-specific handlers using generated macros */
+    priv->read_reg = i225_read_reg; /* same basic MMIO */
+    priv->write_reg = i225_write_reg;
+    priv->get_systime = i226_get_systime;
+    priv->set_systime = i226_set_systime;
+    priv->adjust_systime = i226_adjust_systime;
+    priv->setup_tas = i226_setup_tas;
+    priv->setup_fp = i226_setup_fp;
+    priv->setup_ptm = i226_setup_ptm;
+    return 0;
 }
 
 /**
