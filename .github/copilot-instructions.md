@@ -45,6 +45,18 @@ This repository provides Intel-specific AVB/TSN register access and hardware abs
 - **Testing:**
   - Run test executables in `lib/build/` (e.g., `test_driver.exe`, `test_hardware.exe`).
   - Test sources are in `lib/` (e.g., `test_driver.c`, `test_hardware.c`).
+  
+- **Generating register headers (Python):**
+  - Python is available via the Windows launcher. Verified: `py -3 --version` → Python 3.13.5
+  - From `spec/intel-ethernet-regs/`, regenerate headers like:
+    - `py -3 tools\reggen.py devices\i210.yaml gen`
+    - `py -3 tools\reggen.py devices\i210_v3_7.yaml gen`
+    - `py -3 tools\reggen.py devices\i217.yaml gen`
+    - `py -3 tools\reggen.py devices\i219.yaml gen`
+    - `py -3 tools\reggen.py devices\i225.yaml gen`
+    - `py -3 tools\reggen.py devices\i226.yaml gen`
+  - Output goes to `spec/intel-ethernet-regs/gen/` (e.g., `gen\i217_regs.h`).
+  - If YAML errors occur, check indentation and field nesting (arrays, fields, access) before re-running.
 - **Simulation vs. Real Hardware:**
   - Most device access is currently simulated/stubbed. Real hardware access is required for production.
   - See `TODO.md` for roadmap and missing hardware features.

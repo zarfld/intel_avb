@@ -47,26 +47,7 @@
 #include "intel_private.h"
 #include "../spec/intel-ethernet-regs/gen/i217_regs.h" // Single source of truth for I217 register map
 
-/* I217 specific register definitions */
-#define I217_REG_SYSTIMH         0x0B604  /* System Time High */
-#define I217_REG_SYSTIML         0x0B600  /* System Time Low */
-#define I217_REG_TIMINCA         0x0B608  /* Time Increment */
-#define I217_REG_MDIC            0x00020  /* MDI Control */
-#define I217_REG_CTRL            0x00000  /* Device Control */
-
-/* MDIC register bits (similar to I219 but I217 specific) */
-#define I217_REG_MDIC_DATA_MASK  0x0000FFFF
-#define I217_REG_MDIC_REG_MASK   0x001F0000
-#define I217_REG_MDIC_REG_SHIFT  16
-#define I217_REG_MDIC_PHY_MASK   0x03E00000
-#define I217_REG_MDIC_PHY_SHIFT  21
-#define I217_REG_MDIC_OP_MASK    0x0C000000
-#define I217_REG_MDIC_OP_SHIFT   26
-#define I217_REG_MDIC_R          0x10000000
-#define I217_REG_MDIC_I          0x20000000
-#define I217_REG_MDIC_E          0x40000000
-
-/* MDIC operations */
+/* MDIC operations per spec Section 11.1.2.2.5 */
 #define I217_MDIC_OP_WRITE       0x1
 #define I217_MDIC_OP_READ        0x2
 
@@ -85,7 +66,13 @@ struct i217_private {
 };
 
 /**
- * @brief Wait for MDIC operation to complete
+ * Wait for MDIC operation to complete.
+ *
+ * Hardware: I217 MDIC (0x00020) per I217 datasheet Section 11.1.2.2.5.
+ * Uses MDIC.R (ready/busy) and MDIC.E (error) bits from the SSOT header.
+ *
+ * @param priv Intel device private data (provides read_reg).
+ * @return 0 on success, -ETIMEDOUT on timeout, -EIO on error, <0 on access failure.
  */
 static int i217_wait_mdic_ready(struct intel_private *priv)
 {
@@ -95,12 +82,12 @@ static int i217_wait_mdic_ready(struct intel_private *priv)
     
     /* Wait for ready bit to be clear */
     do {
-        ret = priv->read_reg(priv, I217_REG_MDIC, &mdic);
+    ret = priv->read_reg(priv, I217_MDIC, &mdic);
         if (ret < 0) {
             return ret;
         }
         
-        if (!(mdic & I217_REG_MDIC_R)) {
+    if (!(mdic & (uint32_t)I217_MDIC_R_MASK)) {
             break;
         }
         
@@ -114,7 +101,7 @@ static int i217_wait_mdic_ready(struct intel_private *priv)
     }
     
     /* Check for error */
-    if (mdic & I217_REG_MDIC_E) {
+    if (mdic & (uint32_t)I217_MDIC_E_MASK) {
         return -EIO;
     }
     
@@ -122,7 +109,14 @@ static int i217_wait_mdic_ready(struct intel_private *priv)
 }
 
 /**
- * @brief Read MDIO register from I217
+ * Read MDIO register via MDIC.
+ *
+ * HW context: MDIC (0x00020) per I217 Section 11.1.2.2.5. Encodes PHY, REG, OP fields.
+ * @param priv Intel device private
+ * @param page MDIO page (0 for standard); when non-zero, writes page select reg 22 first.
+ * @param reg MDIO register (0..31)
+ * @param value Out parameter for 16-bit read value
+ * @return 0 on success or negative errno.
  */
 static int i217_mdio_read(struct intel_private *priv, uint32_t page, uint32_t reg, uint16_t *value)
 {
@@ -153,13 +147,13 @@ static int i217_mdio_read(struct intel_private *priv, uint32_t page, uint32_t re
     /* Set up page select if needed */
     if (page != 0) {
         /* Write page select register */
-        mdic = I217_MDIC_OP_WRITE << I217_REG_MDIC_OP_SHIFT |
-               i217_priv->phy_addr << I217_REG_MDIC_PHY_SHIFT |
-               22 << I217_REG_MDIC_REG_SHIFT |  /* Page select register */
-               (page & I217_REG_MDIC_DATA_MASK) |
-               I217_REG_MDIC_R;
+        mdic = (uint32_t)((I217_MDIC_OP_WRITE << I217_MDIC_OP_SHIFT) |
+               ((uint32_t)i217_priv->phy_addr << I217_MDIC_PHY_SHIFT) |
+               (22u << I217_MDIC_REG_SHIFT) |  /* Page select register */
+               (page & (uint32_t)I217_MDIC_DATA_MASK) |
+               I217_MDIC_R_MASK);
         
-        ret = priv->write_reg(priv, I217_REG_MDIC, mdic);
+        ret = priv->write_reg(priv, I217_MDIC, mdic);
         if (ret < 0) {
             i217_priv->mdio_busy = 0;
             return ret;
@@ -173,12 +167,12 @@ static int i217_mdio_read(struct intel_private *priv, uint32_t page, uint32_t re
     }
     
     /* Set up MDIO read operation */
-    mdic = I217_MDIC_OP_READ << I217_REG_MDIC_OP_SHIFT |
-           i217_priv->phy_addr << I217_REG_MDIC_PHY_SHIFT |
-           (reg & 0x1F) << I217_REG_MDIC_REG_SHIFT |
-           I217_REG_MDIC_R;
+    mdic = (uint32_t)((I217_MDIC_OP_READ << I217_MDIC_OP_SHIFT) |
+           ((uint32_t)i217_priv->phy_addr << I217_MDIC_PHY_SHIFT) |
+           ((reg & 0x1Fu) << I217_MDIC_REG_SHIFT) |
+           I217_MDIC_R_MASK);
     
-    ret = priv->write_reg(priv, I217_REG_MDIC, mdic);
+    ret = priv->write_reg(priv, I217_MDIC, mdic);
     if (ret < 0) {
         i217_priv->mdio_busy = 0;
         return ret;
@@ -192,20 +186,23 @@ static int i217_mdio_read(struct intel_private *priv, uint32_t page, uint32_t re
     }
     
     /* Read the result */
-    ret = priv->read_reg(priv, I217_REG_MDIC, &mdic);
+    ret = priv->read_reg(priv, I217_MDIC, &mdic);
     if (ret < 0) {
         i217_priv->mdio_busy = 0;
         return ret;
     }
     
-    *value = (uint16_t)(mdic & I217_REG_MDIC_DATA_MASK);
+    *value = (uint16_t)(mdic & (uint32_t)I217_MDIC_DATA_MASK);
     i217_priv->mdio_busy = 0;
     
     return 0;
 }
 
 /**
- * @brief Write MDIO register to I217
+ * Write MDIO register via MDIC.
+ *
+ * HW context: MDIC (0x00020) per I217 Section 11.1.2.2.5.
+ * @return 0 on success or negative errno.
  */
 static int i217_mdio_write(struct intel_private *priv, uint32_t page, uint32_t reg, uint16_t value)
 {
@@ -236,13 +233,13 @@ static int i217_mdio_write(struct intel_private *priv, uint32_t page, uint32_t r
     /* Set up page select if needed */
     if (page != 0) {
         /* Write page select register */
-        mdic = I217_MDIC_OP_WRITE << I217_REG_MDIC_OP_SHIFT |
-               i217_priv->phy_addr << I217_REG_MDIC_PHY_SHIFT |
-               22 << I217_REG_MDIC_REG_SHIFT |  /* Page select register */
-               (page & I217_REG_MDIC_DATA_MASK) |
-               I217_REG_MDIC_R;
+        mdic = (uint32_t)((I217_MDIC_OP_WRITE << I217_MDIC_OP_SHIFT) |
+               ((uint32_t)i217_priv->phy_addr << I217_MDIC_PHY_SHIFT) |
+               (22u << I217_MDIC_REG_SHIFT) |  /* Page select register */
+               (page & (uint32_t)I217_MDIC_DATA_MASK) |
+               I217_MDIC_R_MASK);
         
-        ret = priv->write_reg(priv, I217_REG_MDIC, mdic);
+        ret = priv->write_reg(priv, I217_MDIC, mdic);
         if (ret < 0) {
             i217_priv->mdio_busy = 0;
             return ret;
@@ -256,13 +253,13 @@ static int i217_mdio_write(struct intel_private *priv, uint32_t page, uint32_t r
     }
     
     /* Set up MDIO write operation */
-    mdic = I217_MDIC_OP_WRITE << I217_REG_MDIC_OP_SHIFT |
-           i217_priv->phy_addr << I217_REG_MDIC_PHY_SHIFT |
-           (reg & 0x1F) << I217_REG_MDIC_REG_SHIFT |
-           (value & I217_REG_MDIC_DATA_MASK) |
-           I217_REG_MDIC_R;
+    mdic = (uint32_t)((I217_MDIC_OP_WRITE << I217_MDIC_OP_SHIFT) |
+        ((uint32_t)i217_priv->phy_addr << I217_MDIC_PHY_SHIFT) |
+        ((reg & 0x1Fu) << I217_MDIC_REG_SHIFT) |
+        ((uint32_t)value & (uint32_t)I217_MDIC_DATA_MASK) |
+        I217_MDIC_R_MASK);
     
-    ret = priv->write_reg(priv, I217_REG_MDIC, mdic);
+    ret = priv->write_reg(priv, I217_MDIC, mdic);
     if (ret < 0) {
         i217_priv->mdio_busy = 0;
         return ret;
@@ -281,7 +278,12 @@ static int i217_mdio_write(struct intel_private *priv, uint32_t page, uint32_t r
 }
 
 /**
- * @brief Read register from I217 device
+ * Read register from I217 device (MMIO path).
+ *
+ * Access pattern: direct MMIO via priv->mmio_base. For Windows/NDIS, platform layer mediates MMIO.
+ * @param priv Intel private
+ * @param offset Register offset
+ * @param value Out value
  */
 static int i217_read_reg(struct intel_private *priv, uint32_t offset, uint32_t *value)
 {
@@ -292,7 +294,7 @@ static int i217_read_reg(struct intel_private *priv, uint32_t offset, uint32_t *
     /* I217 has dual interface - PCIe when active, SMBus when in low power */
     /* Hardware access handled through Windows platform layer (NDIS filter) */
     if (priv->mmio_base) {
-        *value = *((volatile uint32_t *)((char *)priv->mmio_base + offset));
+    *value = *((volatile uint32_t *)((char *)priv->mmio_base + offset));
         return 0;
     }
     
@@ -300,7 +302,7 @@ static int i217_read_reg(struct intel_private *priv, uint32_t offset, uint32_t *
 }
 
 /**
- * @brief Write register to I217 device
+ * Write register to I217 device (MMIO path).
  */
 static int i217_write_reg(struct intel_private *priv, uint32_t offset, uint32_t value)
 {
@@ -311,7 +313,7 @@ static int i217_write_reg(struct intel_private *priv, uint32_t offset, uint32_t 
     /* I217 has dual interface - PCIe when active, SMBus when in low power */
     /* Hardware access handled through Windows platform layer (NDIS filter) */
     if (priv->mmio_base) {
-        *((volatile uint32_t *)((char *)priv->mmio_base + offset)) = value;
+    *((volatile uint32_t *)((char *)priv->mmio_base + offset)) = value;
         return 0;
     }
     
@@ -319,7 +321,9 @@ static int i217_write_reg(struct intel_private *priv, uint32_t offset, uint32_t 
 }
 
 /**
- * @brief Get system time from I217 device
+ * Get 64-bit system time from SYSTIML/H.
+ *
+ * Spec: Section 11.1.2.7.11/12 with read order recommendation.
  */
 static int i217_get_systime(struct intel_private *priv, uint64_t *systime)
 {
@@ -330,13 +334,13 @@ static int i217_get_systime(struct intel_private *priv, uint64_t *systime)
         return -EINVAL;
     }
     
-    /* Read high part first to latch the time */
-    ret = i217_read_reg(priv, I217_REG_SYSTIMH, &systimh);
+    /* Read SYSTIML first to latch SYSTIMH per Section 11.1.2.7.11/12 */
+    ret = i217_read_reg(priv, I217_SYSTIML, &systiml);
     if (ret < 0) {
         return ret;
     }
     
-    ret = i217_read_reg(priv, I217_REG_SYSTIML, &systiml);
+    ret = i217_read_reg(priv, I217_SYSTIMH, &systimh);
     if (ret < 0) {
         return ret;
     }
@@ -347,7 +351,7 @@ static int i217_get_systime(struct intel_private *priv, uint64_t *systime)
 }
 
 /**
- * @brief Set system time on I217 device
+ * Set 64-bit system time into SYSTIML/H.
  */
 static int i217_set_systime(struct intel_private *priv, uint64_t systime)
 {
@@ -362,13 +366,13 @@ static int i217_set_systime(struct intel_private *priv, uint64_t systime)
     systimh = (uint32_t)(systime >> 32);
     
     /* Write low part first */
-    ret = i217_write_reg(priv, I217_REG_SYSTIML, systiml);
+    ret = i217_write_reg(priv, I217_SYSTIML, systiml);
     if (ret < 0) {
         return ret;
     }
     
     /* Write high part to commit the time */
-    ret = i217_write_reg(priv, I217_REG_SYSTIMH, systimh);
+    ret = i217_write_reg(priv, I217_SYSTIMH, systimh);
     if (ret < 0) {
         return ret;
     }
@@ -377,7 +381,7 @@ static int i217_set_systime(struct intel_private *priv, uint64_t systime)
 }
 
 /**
- * @brief Adjust system time frequency on I217 device
+ * Adjust system time frequency (TIMINCA) by a parts-per-billion delta.
  */
 static int i217_adjust_systime(struct intel_private *priv, int32_t ppb)
 {
@@ -403,7 +407,7 @@ static int i217_adjust_systime(struct intel_private *priv, int32_t ppb)
     /* Convert to TIMINCA register format */
     timinca = (uint32_t)(incvalue & 0xFFFFFFFF);
     
-    ret = i217_write_reg(priv, I217_REG_TIMINCA, timinca);
+    ret = i217_write_reg(priv, I217_TIMINCA, timinca);
     if (ret < 0) {
         return ret;
     }
@@ -454,7 +458,7 @@ int intel_i217_init(device_t *dev)
     /* No direct MMIO mapping needed - hardware access via IOCTLs */
     
     /* Try to read control register to verify device access */
-    if (priv->read_reg && priv->read_reg(priv, I217_REG_CTRL, &ctrl) == 0) {
+    if (priv->read_reg && priv->read_reg(priv, I217_CTRL, &ctrl) == 0) {
         /* Device accessible, enable IEEE 1588 features if available */
         i217_priv->ieee1588_enabled = 1;
     }
@@ -482,4 +486,48 @@ void intel_i217_cleanup(device_t *dev)
     
     /* Hardware access handled through Windows platform layer (NDIS filter) */
     /* No direct MMIO unmapping needed - cleanup via platform layer */
+}
+
+/**
+ * Read and optionally acknowledge I217 interrupts (ICR rc/w1c semantics).
+ *
+ * Hardware: ICR (0x000C0; RC/W1C) per I217 datasheet Section 11.1.2.2.22.
+ * Notes:
+ *  - I217 does not expose EICR; legacy causes are reported in ICR.
+ *  - Writing back the observed ICR value clears the causes (rc/w1c).
+ *  - Callers may examine bits such as LSC, RXDMT0, RXO, RXT0, TXDW, TXQE.
+ *
+ * @param priv Intel private
+ * @param icr_out Optional pointer to receive ICR value
+ * @param ack When non-zero, write the ICR value back to clear seen bits
+ * @return 0 on success, negative errno on failure
+ */
+static int i217_read_and_ack_interrupts(struct intel_private *priv, uint32_t *icr_out, int ack)
+{
+    uint32_t icr = 0;
+    int ret;
+
+    if (!priv) return -EINVAL;
+
+    ret = i217_read_reg(priv, I217_ICR, &icr);
+    if (ret < 0) return ret;
+
+    if (ack && icr) {
+        /* rc/w1c: write back the bits we saw to clear them */
+        (void)i217_write_reg(priv, I217_ICR, icr);
+    }
+
+    if (icr_out) *icr_out = icr;
+    return 0;
+}
+
+/**
+ * Public wrapper for reading/acking I217 interrupts.
+ */
+int intel_i217_read_and_ack_interrupts(device_t *dev, uint32_t *icr, int ack)
+{
+    struct intel_private *priv;
+    if (!dev || !dev->private_data) return -EINVAL;
+    priv = (struct intel_private *)dev->private_data;
+    return i217_read_and_ack_interrupts(priv, icr, ack);
 }

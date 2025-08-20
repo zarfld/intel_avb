@@ -256,6 +256,10 @@ void intel_common_cleanup(device_t *dev);
 
 /* I210 helpers */
 int intel_i210_read_and_ack_interrupts(device_t *dev, uint32_t *eicr, uint32_t *icr, int ack);
+/* I217: ICR-only interrupt read/ack (no EICR on I217 per spec).
+ * Returns 0 on success, negative errno on failure.
+ */
+int intel_i217_read_and_ack_interrupts(device_t *dev, uint32_t *icr, int ack);
 
 #ifdef __cplusplus
 }
