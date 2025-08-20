@@ -22,20 +22,21 @@ cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS /I. intel_i210.c /Fo:build\intel_i210.ob
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS /I. intel_i217.c /Fo:build\intel_i217.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS /I. intel_i219.c /Fo:build\intel_i219.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS /I. intel_i225.c /Fo:build\intel_i225.obj
+cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS /I. intel_windows.c /Fo:build\intel_windows.obj
 
 REM Create static library
 echo Creating static library...
-lib /OUT:build\intel_avb.lib build\intel.obj build\intel_common.obj build\intel_i210.obj build\intel_i217.obj build\intel_i219.obj build\intel_i225.obj
+lib /OUT:build\intel_avb.lib build\intel.obj build\intel_common.obj build\intel_i210.obj build\intel_i217.obj build\intel_i219.obj build\intel_i225.obj build\intel_windows.obj
 
 REM Create DLL
 echo Creating dynamic library...
-link /DLL /OUT:build\intel_avb.dll build\intel.obj build\intel_common.obj build\intel_i210.obj build\intel_i217.obj build\intel_i219.obj build\intel_i225.obj
+link /DLL /OUT:build\intel_avb.dll build\intel.obj build\intel_common.obj build\intel_i210.obj build\intel_i217.obj build\intel_i219.obj build\intel_i225.obj build\intel_windows.obj
 
 REM Compile test program
 echo Compiling test program...
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS /I. test_intel.c /Fo:build\test_intel.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS /I. intel_common.c /Fo:build\test_intel_common.obj
-link /OUT:build\test_intel.exe build\test_intel.obj build\test_intel_common.obj build\intel_avb.lib
+link /OUT:build\test_intel.exe build\test_intel.obj build\test_intel_common.obj build\intel_avb.lib build\intel_windows.obj
 
 echo Build complete!
 echo.
