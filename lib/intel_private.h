@@ -98,11 +98,11 @@ struct intel_private {
 #define INTEL_REG_AUXSTMPL0    0x0B65C  /* Auxiliary Time Stamp Low 0 */
 #define INTEL_REG_AUXSTMPH0    0x0B660  /* Auxiliary Time Stamp High 0 */
 
-/* TSN registers (I225/I226 specific) */
-#define INTEL_REG_TAS_CTRL     0x8600   /* Time Aware Shaper Control */
-#define INTEL_REG_TAS_CONFIG   0x8604   /* Time Aware Shaper Config */
-#define INTEL_REG_FP_CTRL      0x8700   /* Frame Preemption Control */
-#define INTEL_REG_PTM_CTRL     0x8800   /* PTM Control */
+/* TSN registers (I225/I226 specific)
+ * Note: Do not duplicate device-specific TSN/PTM/FP register offsets here.
+ * Always include and use the generated headers under spec/intel-ethernet-regs/gen/
+ * (e.g., i225_regs.h, i226_regs.h) as the single source of truth.
+ */
 
 /* Common control register bits */
 #define INTEL_CTRL_RESET       (1 << 26)

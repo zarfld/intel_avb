@@ -35,6 +35,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <stddef.h>
 
 #include "intel.h"
 #include "intel_private.h"
@@ -68,6 +69,9 @@ static int i225_read_reg(struct intel_private *priv, uint32_t offset, uint32_t *
     if (!priv || !priv->mmio_base || !value) {
         return -EINVAL;
     }
+    if (offset + sizeof(uint32_t) > priv->mmio_size) {
+        return -ERANGE;
+    }
     
     /* Memory-mapped I/O read */
     *value = *((volatile uint32_t *)((char *)priv->mmio_base + offset));
@@ -82,6 +86,9 @@ static int i225_write_reg(struct intel_private *priv, uint32_t offset, uint32_t 
 {
     if (!priv || !priv->mmio_base) {
         return -EINVAL;
+    }
+    if (offset + sizeof(uint32_t) > priv->mmio_size) {
+        return -ERANGE;
     }
     
     /* Memory-mapped I/O write */
@@ -359,20 +366,39 @@ static int i225_setup_ptm(struct intel_private *priv, struct ptm_config *config)
     
     i225_priv = (struct i225_private *)priv->device_private;
     
-    /* Configure PTM */
-    ptm_ctrl = 0;
-    if (config->enabled) {
-        ptm_ctrl = (uint32_t)I225_PTM_CONFIG_SET(ptm_ctrl, I225_PTM_CONFIG_EN_MASK, I225_PTM_CONFIG_EN_SHIFT, 1ULL);
-        ptm_ctrl = (uint32_t)I225_PTM_CONFIG_SET(ptm_ctrl, I225_PTM_CONFIG_AUTO_UPD_MASK, I225_PTM_CONFIG_AUTO_UPD_SHIFT, 1ULL);
-    }
-    
-    /* Set clock granularity */
-    ptm_ctrl = (uint32_t)I225_PTM_CONFIG_SET(ptm_ctrl, I225_PTM_CONFIG_CLOCK_GRANULARITY_MASK, I225_PTM_CONFIG_CLOCK_GRANULARITY_SHIFT, (unsigned long long)config->clock_granularity);
-    
-    ret = i225_write_reg(priv, I225_PTM_CONFIG, ptm_ctrl);
-    if (ret < 0) {
-        return ret;
-    }
+    /* Configure PTM via PCIe capability, not MMIO. */
+    do {
+        if (!priv || !priv->platform_ops || !priv->platform_ops->pci_read_config || !priv->platform_ops->pci_write_config) { ret = -ENOTSUP; break; }
+        /* Locate PTM extended capability by walking ext caps from 0x100. Minimal walker: read header at current, check ID, follow next. */
+        DWORD off = 0x100; DWORD hdr = 0; DWORD next = 0; DWORD capid = 0; DWORD cap_base = 0; int found = 0;
+        while (off) {
+            ret = priv->platform_ops->pci_read_config((device_t*)((char*)priv - offsetof(struct intel_private, device_type)), off, &hdr);
+            if (ret != 0) { break; }
+            capid = hdr & 0xFFFF; next = (hdr >> 20) & 0xFFF; /* PCIe ext cap header: [31:20] next, [15:0] ID */
+            if (capid == I225_PTM_CAP_ID) { found = 1; cap_base = off; break; }
+            off = next;
+        }
+        if (!found) { ret = -ENOTSUP; break; }
+        /* Read PTM Capability to get granularity; CAP at base+0x04 (per header). */
+        DWORD cap_lo = 0;
+        ret = priv->platform_ops->pci_read_config((device_t*)((char*)priv - offsetof(struct intel_private, device_type)), cap_base + I225_PTM_CAP, &cap_lo);
+        if (ret != 0) break;
+        /* Program PTM Control at base+CTRL (16-bit). Read-modify-write 32-bit window. */
+        DWORD ctrl = 0;
+        ret = priv->platform_ops->pci_read_config((device_t*)((char*)priv - offsetof(struct intel_private, device_type)), cap_base + I225_PTM_CTRL, &ctrl);
+        if (ret != 0) break;
+        if (config->enabled) {
+            /* Set EN bit */
+            ctrl |= (1U << I225_PTM_CTRL_EN_SHIFT);
+        } else {
+            ctrl &= ~(1U << I225_PTM_CTRL_EN_SHIFT);
+        }
+        ret = priv->platform_ops->pci_write_config((device_t*)((char*)priv - offsetof(struct intel_private, device_type)), cap_base + I225_PTM_CTRL, ctrl);
+        if (ret != 0) break;
+        /* Optionally read STATUS */
+        (void)priv->platform_ops->pci_read_config((device_t*)((char*)priv - offsetof(struct intel_private, device_type)), cap_base + I225_PTM_STATUS, &ptm_ctrl);
+    } while (0);
+    if (ret != 0) { return ret; }
     
     /* Save configuration */
     i225_priv->ptm_enabled = config->enabled;
@@ -413,6 +439,8 @@ int intel_i225_init(device_t *dev)
     priv->setup_fp = i225_setup_fp;
     priv->setup_ptm = i225_setup_ptm;
     
+    /* Bind platform ops (Windows NDIS by default in this build) */
+    priv->platform_ops = intel_get_windows_platform_ops();
     /* MMIO access handled through Windows platform layer (NDIS filter) */
     /* No direct MMIO mapping needed - hardware access via IOCTLs */
     
@@ -498,14 +526,20 @@ static int i226_setup_fp(struct intel_private *priv, struct tsn_fp_config *confi
  */
 static int i226_setup_ptm(struct intel_private *priv, struct ptm_config *config)
 {
-    struct i225_private *p; uint32_t ptm = 0; int ret; if (!priv || !priv->device_private || !config) return -EINVAL; p = (struct i225_private *)priv->device_private;
-    if (config->enabled) {
-        ptm = (uint32_t)I226_PTM_CONFIG_SET(ptm, I226_PTM_CONFIG_EN_MASK, I226_PTM_CONFIG_EN_SHIFT, 1ULL);
-        ptm = (uint32_t)I226_PTM_CONFIG_SET(ptm, I226_PTM_CONFIG_AUTO_UPD_MASK, I226_PTM_CONFIG_AUTO_UPD_SHIFT, 1ULL);
+    struct i225_private *p; uint32_t ptm_status = 0; int ret; if (!priv || !priv->device_private || !config) return -EINVAL; p = (struct i225_private *)priv->device_private;
+    /* Same PCIe extended capability flow as I225 */
+    if (!priv->platform_ops || !priv->platform_ops->pci_read_config || !priv->platform_ops->pci_write_config) return -ENOTSUP;
+    DWORD off=0x100, hdr=0, next=0, capid=0, cap_base=0; int found=0;
+    while (off) {
+        ret = priv->platform_ops->pci_read_config((device_t*)((char*)priv - offsetof(struct intel_private, device_type)), off, &hdr); if (ret!=0) return ret;
+        capid = hdr & 0xFFFF; next = (hdr >> 20) & 0xFFF; if (capid == I226_PTM_CAP_ID) { found=1; cap_base=off; break; } off = next;
     }
-    ptm = (uint32_t)I226_PTM_CONFIG_SET(ptm, I226_PTM_CONFIG_CLOCK_GRANULARITY_MASK, I226_PTM_CONFIG_CLOCK_GRANULARITY_SHIFT, (unsigned long long)config->clock_granularity);
-    ret = i225_write_reg(priv, I226_PTM_CONFIG, ptm); if (ret < 0) return ret;
-    p->ptm_enabled = config->enabled; p->ptm_granularity = config->clock_granularity; return 0;
+    if (!found) return -ENOTSUP;
+    DWORD ctrl=0; ret = priv->platform_ops->pci_read_config((device_t*)((char*)priv - offsetof(struct intel_private, device_type)), cap_base + I226_PTM_CTRL, &ctrl); if (ret!=0) return ret;
+    if (config->enabled) ctrl |= (1U << I226_PTM_CTRL_EN_SHIFT); else ctrl &= ~(1U << I226_PTM_CTRL_EN_SHIFT);
+    ret = priv->platform_ops->pci_write_config((device_t*)((char*)priv - offsetof(struct intel_private, device_type)), cap_base + I226_PTM_CTRL, ctrl); if (ret!=0) return ret;
+    (void)priv->platform_ops->pci_read_config((device_t*)((char*)priv - offsetof(struct intel_private, device_type)), cap_base + I226_PTM_STATUS, &ptm_status);
+    p->ptm_enabled = config->enabled; /* Granularity is read-only from CAP; not set here */ return 0;
 }
 
 /**
@@ -548,6 +582,8 @@ int intel_i226_init(device_t *dev)
     priv->setup_tas = i226_setup_tas;
     priv->setup_fp = i226_setup_fp;
     priv->setup_ptm = i226_setup_ptm;
+    /* Bind platform ops (Windows NDIS by default in this build) */
+    priv->platform_ops = intel_get_windows_platform_ops();
     return 0;
 }
 
