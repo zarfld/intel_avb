@@ -505,31 +505,6 @@ static int windows_mdio_write(device_t *dev, uint16_t phy_addr, uint16_t reg_add
            phy_addr, reg_addr, value);
     return WIN_SUCCESS;
 }
-               (reg_addr << 16) | /* Register address */
-               (2 << 0);          /* Turnaround bits */
-    
-    /* Write MDIO command */
-    if (windows_mmio_write(dev, 0x0020, mdio_cmd) != WIN_SUCCESS) {
-        return WIN_ERROR_ACCESS;
-    }
-    
-    /* Wait for completion (simulated) */
-    do {
-        Sleep(1);
-        if (windows_mmio_read(dev, 0x0020, &mdio_data) != WIN_SUCCESS) {
-            return WIN_ERROR_ACCESS;
-        }
-        timeout--;
-    } while ((mdio_data & 0x80000000) && timeout > 0);
-    
-    if (timeout <= 0) {
-        printf("Windows HW: MDIO Write timeout\n");
-        return WIN_ERROR_ACCESS;
-    }
-    
-    printf("Windows HW: MDIO Write completed\n");
-    return WIN_SUCCESS;
-}
 
 /**
  * @brief Read IEEE 1588 timestamp through NDIS filter
@@ -560,7 +535,7 @@ static int windows_read_timestamp(device_t *dev, uint64_t *timestamp)
     
     if (!DeviceIoControl(
         win_ctx->filter_device_handle,
-        IOCTL_AVB_READ_TIMESTAMP,
+    IOCTL_AVB_GET_TIMESTAMP,
         &request,
         sizeof(request),
         &request,
@@ -582,23 +557,4 @@ static int windows_read_timestamp(device_t *dev, uint64_t *timestamp)
     return WIN_SUCCESS;
 }
 
-/* Windows platform operations structure */
-static const struct platform_ops windows_platform_ops = {
-    .init = windows_hw_init,
-    .cleanup = windows_hw_cleanup,
-    .pci_read_config = windows_pci_read_config,
-    .pci_write_config = windows_pci_write_config,
-    .mmio_read = windows_mmio_read,
-    .mmio_write = windows_mmio_write,
-    .mdio_read = windows_mdio_read,
-    .mdio_write = windows_mdio_write,
-    .read_timestamp = windows_read_timestamp
-};
-
-/**
- * @brief Get Windows platform operations
- */
-const struct platform_ops *intel_get_windows_platform_ops(void)
-{
-    return &windows_platform_ops;
-}
+/* Note: platform ops getter defined earlier (windows_ndis_platform_ops). */
