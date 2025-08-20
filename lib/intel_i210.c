@@ -38,19 +38,7 @@
 
 #include "intel.h"
 #include "intel_private.h"
-#include "../spec/intel-ethernet-regs/gen/i210_regs.h" // Single source of truth for I210 register map
-
-/* I210 specific register definitions */
-#define I210_REG_TSYNCRXCTL      0x0B620  /* Rx Time Sync Control */
-#define I210_REG_TSYNCTXCTL      0x0B614  /* Tx Time Sync Control */
-#define I210_REG_RXSTMPL         0x0B624  /* Rx Time Stamp Low */
-#define I210_REG_RXSTMPH         0x0B628  /* Rx Time Stamp High */
-#define I210_REG_TXSTMPL         0x0B618  /* Tx Time Stamp Low */
-#define I210_REG_TXSTMPH         0x0B61C  /* Tx Time Stamp High */
-
-/* Time sync control register bits */
-#define I210_TSYNCRXCTL_ENABLED  (1 << 4)   /* Rx timestamping enabled */
-#define I210_TSYNCTXCTL_ENABLED  (1 << 4)   /* Tx timestamping enabled */
+#include "../spec/intel-ethernet-regs/gen/i210_regs.h" // SSOT: generated I210 regs/fields
 
 /* I210 private data structure */
 struct i210_private {
@@ -104,12 +92,12 @@ static int i210_get_systime(struct intel_private *priv, uint64_t *systime)
     }
     
     /* Read high part first to latch the time */
-    ret = i210_read_reg(priv, INTEL_REG_SYSTIMH, &systimh);
+    ret = i210_read_reg(priv, I210_SYSTIMH, &systimh);
     if (ret < 0) {
         return ret;
     }
     
-    ret = i210_read_reg(priv, INTEL_REG_SYSTIML, &systiml);
+    ret = i210_read_reg(priv, I210_SYSTIML, &systiml);
     if (ret < 0) {
         return ret;
     }
@@ -135,13 +123,13 @@ static int i210_set_systime(struct intel_private *priv, uint64_t systime)
     systimh = (uint32_t)(systime >> 32);
     
     /* Write low part first */
-    ret = i210_write_reg(priv, INTEL_REG_SYSTIML, systiml);
+    ret = i210_write_reg(priv, I210_SYSTIML, systiml);
     if (ret < 0) {
         return ret;
     }
     
     /* Write high part to commit the time */
-    ret = i210_write_reg(priv, INTEL_REG_SYSTIMH, systimh);
+    ret = i210_write_reg(priv, I210_SYSTIMH, systimh);
     if (ret < 0) {
         return ret;
     }
@@ -176,12 +164,94 @@ static int i210_adjust_systime(struct intel_private *priv, int32_t ppb)
     /* Convert to TIMINCA register format */
     timinca = (uint32_t)(incvalue & 0xFFFFFFFF);
     
-    ret = i210_write_reg(priv, INTEL_REG_TIMINCA, timinca);
+    ret = i210_write_reg(priv, I210_TIMINCA, timinca);
     if (ret < 0) {
         return ret;
     }
     
     return 0;
+}
+
+/**
+ * Enable Link Status Change (LSC) interrupt masking for I210.
+ * Hardware: IMS (0x1508; R/W) LSC[2] enables LSC interrupt masking.
+ * Reference: Intel I210 Datasheet 333016, Section 8.8.11 (IMS).
+ */
+static int i210_enable_lsc_interrupt(struct intel_private *priv)
+{
+    if (!priv) return -EINVAL;
+
+    /* Read-modify-write IMS to set LSC mask bit. access: rw */
+    uint32_t ims;
+    int ret = i210_read_reg(priv, I210_IMS, &ims);
+    if (ret < 0) return ret;
+
+    ims = (uint32_t)I210_IMS_SET(ims, I210_IMS_LSC_MASK, I210_IMS_LSC_SHIFT, 1ULL);
+    return i210_write_reg(priv, I210_IMS, ims);
+}
+
+/**
+ * Read and optionally acknowledge I210 interrupts with rc/w1c semantics.
+ *
+ * Parameters:
+ *  - priv: Intel private context with MMIO base.
+ *  - eicr_out: Optional pointer to receive EICR value (Extended Interrupt Cause).
+ *  - icr_out: Optional pointer to receive ICR value when EICR.Other=1.
+ *  - ack: When non-zero, writes back the observed bits to EICR/ICR to clear them.
+ *
+ * Returns:
+ *  - 0 on success; negative errno on error.
+ *
+ * Hardware context:
+ *  - EICR (0x1580; RC/W1C), Other bit [31] summarizes masked ICR causes.
+ *    Reference: Intel I210 Datasheet 333016, Section 8.8.3.
+ *  - ICR (0x1500; RC/W1C) includes LSC[2], MNG[18], DRSTA[30].
+ *    Reference: Section 8.8.9. Clearing requires writing 1s to the bits seen.
+ */
+static int i210_read_and_ack_interrupts(struct intel_private *priv,
+                                        uint32_t *eicr_out,
+                                        uint32_t *icr_out,
+                                        int ack)
+{
+    uint32_t eicr = 0, icr = 0;
+    int ret;
+    if (!priv) return -EINVAL;
+
+    ret = i210_read_reg(priv, I210_EICR, &eicr);
+    if (ret < 0) return ret;
+
+    /* If Other is set, read ICR to get legacy causes (LSC/MNG/DRSTA) */
+    if (I210_EICR_GET(eicr, I210_EICR_OTHER_MASK, I210_EICR_OTHER_SHIFT)) {
+        ret = i210_read_reg(priv, I210_ICR, &icr);
+        if (ret < 0) return ret;
+        /* Example: check LSC using field macros */
+        (void)I210_ICR_GET(icr, I210_ICR_LSC_MASK, I210_ICR_LSC_SHIFT);
+        if (ack) {
+            /* rc/w1c: write-back the bits we saw to clear them */
+            (void)i210_write_reg(priv, I210_ICR, icr);
+        }
+    }
+
+    if (ack) {
+        /* Always ack EICR by writing back seen bits (rc/w1c) */
+        (void)i210_write_reg(priv, I210_EICR, eicr);
+    }
+
+    if (eicr_out) *eicr_out = eicr;
+    if (icr_out) *icr_out = icr;
+    return 0;
+}
+
+/**
+ * intel_i210_read_and_ack_interrupts
+ * Public wrapper using device_t to read/ack I210 interrupts (rc/w1c).
+ * See i210_read_and_ack_interrupts for semantics.
+ */
+int intel_i210_read_and_ack_interrupts(device_t *dev, uint32_t *eicr, uint32_t *icr, int ack)
+{
+    if (!dev || !dev->private_data) return -EINVAL;
+    struct intel_private *priv = (struct intel_private *)dev->private_data;
+    return i210_read_and_ack_interrupts(priv, eicr, icr, ack);
 }
 
 /**
@@ -199,26 +269,26 @@ static int i210_enable_timestamping(struct intel_private *priv)
     
     i210_priv = (struct i210_private *)priv->device_private;
     
-    /* Enable Rx timestamping */
-    ret = i210_read_reg(priv, I210_REG_TSYNCRXCTL, &tsyncrxctl);
+    /* Enable Rx timestamping (TSYNCRXCTL.EN = 1) */
+    ret = i210_read_reg(priv, I210_TSYNCRXCTL, &tsyncrxctl);
+    if (ret < 0) {
+        return ret;
+    }
+
+    tsyncrxctl = (uint32_t)I210_TSYNCRXCTL_SET(tsyncrxctl, I210_TSYNCRXCTL_EN_MASK, I210_TSYNCRXCTL_EN_SHIFT, 1ULL);
+    ret = i210_write_reg(priv, I210_TSYNCRXCTL, tsyncrxctl);
     if (ret < 0) {
         return ret;
     }
     
-    tsyncrxctl |= I210_TSYNCRXCTL_ENABLED;
-    ret = i210_write_reg(priv, I210_REG_TSYNCRXCTL, tsyncrxctl);
+    /* Enable Tx timestamping (TSYNCTXCTL.EN = 1) */
+    ret = i210_read_reg(priv, I210_TSYNCTXCTL, &tsynctxctl);
     if (ret < 0) {
         return ret;
     }
-    
-    /* Enable Tx timestamping */
-    ret = i210_read_reg(priv, I210_REG_TSYNCTXCTL, &tsynctxctl);
-    if (ret < 0) {
-        return ret;
-    }
-    
-    tsynctxctl |= I210_TSYNCTXCTL_ENABLED;
-    ret = i210_write_reg(priv, I210_REG_TSYNCTXCTL, tsynctxctl);
+
+    tsynctxctl = (uint32_t)I210_TSYNCTXCTL_SET(tsynctxctl, I210_TSYNCTXCTL_EN_MASK, I210_TSYNCTXCTL_EN_SHIFT, 1ULL);
+    ret = i210_write_reg(priv, I210_TSYNCTXCTL, tsynctxctl);
     if (ret < 0) {
         return ret;
     }
@@ -250,12 +320,12 @@ static int i210_get_rx_timestamp(struct intel_private *priv, uint64_t *timestamp
     }
     
     /* Read timestamp registers */
-    ret = i210_read_reg(priv, I210_REG_RXSTMPH, &rxstmph);
+    ret = i210_read_reg(priv, I210_RXSTMPH, &rxstmph);
     if (ret < 0) {
         return ret;
     }
-    
-    ret = i210_read_reg(priv, I210_REG_RXSTMPL, &rxstmpl);
+
+    ret = i210_read_reg(priv, I210_RXSTMPL, &rxstmpl);
     if (ret < 0) {
         return ret;
     }
@@ -286,12 +356,12 @@ static int i210_get_tx_timestamp(struct intel_private *priv, uint64_t *timestamp
     }
     
     /* Read timestamp registers */
-    ret = i210_read_reg(priv, I210_REG_TXSTMPH, &txstmph);
+    ret = i210_read_reg(priv, I210_TXSTMPH, &txstmph);
     if (ret < 0) {
         return ret;
     }
-    
-    ret = i210_read_reg(priv, I210_REG_TXSTMPL, &txstmpl);
+
+    ret = i210_read_reg(priv, I210_TXSTMPL, &txstmpl);
     if (ret < 0) {
         return ret;
     }
@@ -343,9 +413,12 @@ int intel_i210_init(device_t *dev)
     /* No direct MMIO mapping needed - hardware access via IOCTLs */
     
     /* Try to read control register to verify device access */
-    if (priv->read_reg && priv->read_reg(priv, INTEL_REG_CTRL, &ctrl) == 0) {
-        /* Device accessible, try to enable timestamping */
-        i210_enable_timestamping(priv);
+    if (priv->read_reg && priv->read_reg(priv, I210_CTRL, &ctrl) == 0) {
+    /* Device accessible: enable timestamping and LSC interrupt */
+        (void)i210_enable_timestamping(priv);
+        (void)i210_enable_lsc_interrupt(priv);
+    /* Proactively clear any pending interrupts (rc/w1c) */
+    (void)i210_read_and_ack_interrupts(priv, NULL, NULL, 1);
     }
     
     return 0;
@@ -372,16 +445,16 @@ void intel_i210_cleanup(device_t *dev)
         if (i210_priv->timestamping_enabled && priv->write_reg) {
             uint32_t tsyncrxctl, tsynctxctl;
             
-            /* Disable Rx timestamping */
-            if (priv->read_reg(priv, I210_REG_TSYNCRXCTL, &tsyncrxctl) == 0) {
-                tsyncrxctl &= ~I210_TSYNCRXCTL_ENABLED;
-                priv->write_reg(priv, I210_REG_TSYNCRXCTL, tsyncrxctl);
+            /* Disable Rx timestamping (TSYNCRXCTL.EN = 0) */
+            if (priv->read_reg(priv, I210_TSYNCRXCTL, &tsyncrxctl) == 0) {
+                tsyncrxctl = (uint32_t)I210_TSYNCRXCTL_SET(tsyncrxctl, I210_TSYNCRXCTL_EN_MASK, I210_TSYNCRXCTL_EN_SHIFT, 0ULL);
+                priv->write_reg(priv, I210_TSYNCRXCTL, tsyncrxctl);
             }
             
-            /* Disable Tx timestamping */
-            if (priv->read_reg(priv, I210_REG_TSYNCTXCTL, &tsynctxctl) == 0) {
-                tsynctxctl &= ~I210_TSYNCTXCTL_ENABLED;
-                priv->write_reg(priv, I210_REG_TSYNCTXCTL, tsynctxctl);
+            /* Disable Tx timestamping (TSYNCTXCTL.EN = 0) */
+            if (priv->read_reg(priv, I210_TSYNCTXCTL, &tsynctxctl) == 0) {
+                tsynctxctl = (uint32_t)I210_TSYNCTXCTL_SET(tsynctxctl, I210_TSYNCTXCTL_EN_MASK, I210_TSYNCTXCTL_EN_SHIFT, 0ULL);
+                priv->write_reg(priv, I210_TSYNCTXCTL, tsynctxctl);
             }
         }
         

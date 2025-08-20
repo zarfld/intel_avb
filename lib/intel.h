@@ -254,6 +254,9 @@ int intel_has_capability(device_t *dev, uint32_t capability);
 int intel_common_init(device_t *dev);
 void intel_common_cleanup(device_t *dev);
 
+/* I210 helpers */
+int intel_i210_read_and_ack_interrupts(device_t *dev, uint32_t *eicr, uint32_t *icr, int ack);
+
 #ifdef __cplusplus
 }
 #endif
