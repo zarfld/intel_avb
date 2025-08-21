@@ -5,7 +5,7 @@
 
 CC = gcc
 CFLAGS = -Wall -Wextra -O2 -g -fPIC
-INCLUDES = -I. -I../../../lib/common
+INCLUDES = -I. -I../../../lib/common -I../include
 LDFLAGS = -shared
 
 # Source files

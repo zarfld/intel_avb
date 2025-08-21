@@ -6,8 +6,8 @@ echo  Building Intel HAL Hardware Test Suite
 echo ================================================
 echo.
 echo Compiling hardware test program...
-cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS /I. test_hardware.c /Fo:build\test_hardware.obj
-cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS /I. intel_common.c /Fo:build\test_hardware_common.obj
+cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS /I. /I..\include test_hardware.c /Fo:build\test_hardware.obj
+cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS /I. /I..\include intel_common.c /Fo:build\test_hardware_common.obj
 echo.
 echo Linking hardware test executable...
 link /OUT:build\test_hardware.exe build\test_hardware.obj build\test_hardware_common.obj

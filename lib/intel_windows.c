@@ -18,37 +18,7 @@
 #include "intel.h"
 #include "intel_private.h"
 #include "intel_windows.h"
-
-/* IOCTL definitions for communication with NDIS filter driver */
-#define _NDIS_CONTROL_CODE(request,method) \
-            CTL_CODE(FILE_DEVICE_PHYSICAL_NETCARD, request, method, FILE_ANY_ACCESS)
-
-#define IOCTL_AVB_INIT_DEVICE           _NDIS_CONTROL_CODE(20, METHOD_BUFFERED)
-#define IOCTL_AVB_READ_REGISTER         _NDIS_CONTROL_CODE(22, METHOD_BUFFERED)
-#define IOCTL_AVB_WRITE_REGISTER        _NDIS_CONTROL_CODE(23, METHOD_BUFFERED)
-#define IOCTL_AVB_GET_TIMESTAMP         _NDIS_CONTROL_CODE(24, METHOD_BUFFERED)
-#define IOCTL_AVB_MDIO_READ             _NDIS_CONTROL_CODE(29, METHOD_BUFFERED)
-#define IOCTL_AVB_MDIO_WRITE            _NDIS_CONTROL_CODE(30, METHOD_BUFFERED)
-
-/* IOCTL data structures */
-typedef struct _AVB_REGISTER_REQUEST {
-    UINT32 offset;
-    UINT32 value;
-    ULONG status;
-} AVB_REGISTER_REQUEST, *PAVB_REGISTER_REQUEST;
-
-typedef struct _AVB_TIMESTAMP_REQUEST {
-    UINT64 timestamp;
-    int clock_id;
-    ULONG status;
-} AVB_TIMESTAMP_REQUEST, *PAVB_TIMESTAMP_REQUEST;
-
-typedef struct _AVB_MDIO_REQUEST {
-    UINT32 page;
-    UINT32 reg;
-    UINT16 value;
-    ULONG status;
-} AVB_MDIO_REQUEST, *PAVB_MDIO_REQUEST;
+#include "../include/avb_ioctl.h" /* shared IOCTL ABI */
 
 /* Windows-specific error mappings */
 #define WIN_SUCCESS         0
