@@ -24,6 +24,7 @@ cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% intel_i217.c /Fo:build\intel_i217.
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% intel_i219.c /Fo:build\intel_i219.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% intel_i225.c /Fo:build\intel_i225.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% intel_windows.c /Fo:build\intel_windows.obj
+cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_realmode.c /Fo:build\test_realmode.obj
 
 REM Create static library
 echo Creating static library...
@@ -38,12 +39,14 @@ echo Compiling test program...
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_intel.c /Fo:build\test_intel.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% intel_common.c /Fo:build\test_intel_common.obj
 link /OUT:build\test_intel.exe build\test_intel.obj build\test_intel_common.obj build\intel_avb.lib build\intel_windows.obj
+link /OUT:build\test_realmode.exe build\test_realmode.obj
 
 echo Build complete!
 echo.
 echo Output files:
 echo   build\intel_avb.lib   - Static library
 echo   build\intel_avb.dll   - Dynamic library  
-echo   build\test_intel.exe  - Test program
+echo   build\test_intel.exe      - Simulated API test
+echo   build\test_realmode.exe   - Real IOCTL interface test
 echo.
 popd
