@@ -63,6 +63,11 @@ extern "C" {
 #define ENOMEM          12      /* Out of memory */
 #endif
 
+/* Provide UNREFERENCED_PARAMETER fallback for kernel-style builds */
+#ifndef UNREFERENCED_PARAMETER
+#define UNREFERENCED_PARAMETER(P) (void)(P)
+#endif
+
 /* Use Windows kernel types instead of standard C types */
 typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;  
@@ -82,6 +87,7 @@ typedef unsigned long long size_t;
 /* Simple snprintf replacement for kernel mode */
 static inline int kernel_snprintf(char *buffer, size_t size, const char *format, ...)
 {
+    UNREFERENCED_PARAMETER(format);
     /* For now, just clear the buffer - the Intel library only uses this for device info strings */
     if (buffer && size > 0) {
         buffer[0] = '\0';
