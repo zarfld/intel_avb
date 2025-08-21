@@ -1,21 +1,12 @@
 {
-  // VS Code tasks for building and testing Intel AVB HAL (Windows)
   "version": "2.0.0",
   "tasks": [
     {
       "label": "Intel AVB: Build (Windows)",
       "type": "shell",
       "command": "powershell",
-      "args": [
-        "-NoLogo",
-        "-ExecutionPolicy","Bypass",
-        "-Command",
-        "cd '$env:USERPROFILE/source/repos/intel_avb/lib'; ./build_windows.bat"
-      ],
-      "group": {
-        "kind": "build",
-        "isDefault": true
-      },
+      "args": ["-NoLogo","-ExecutionPolicy","Bypass","-Command","cd '$env:USERPROFILE/source/repos/intel_avb/lib'; ./build_windows.bat"],
+      "group": {"kind": "build", "isDefault": true},
       "problemMatcher": []
     },
     {
@@ -23,86 +14,13 @@
       "type": "shell",
       "dependsOn": ["Intel AVB: Build (Windows)"],
       "command": "powershell",
-      "args": [
-        "-NoLogo",
-        "-ExecutionPolicy","Bypass",
-        "-Command",
-        "cd '$env:USERPROFILE/source/repos/intel_avb/lib'; if (!(Test-Path build/test_intel.exe)) { ./build_windows.bat }; ./build/test_intel.exe"
-      ],
+      "args": ["-NoLogo","-ExecutionPolicy","Bypass","-Command","cd '$env:USERPROFILE/source/repos/intel_avb/lib'; if (!(Test-Path build/test_intel.exe)) { ./build_windows.bat }; ./build/test_intel.exe"],
       "group": "test",
       "problemMatcher": []
     },
-    {
-      "label": "Intel AVB: Minimal Test", 
-      "type": "shell",
-      "command": "powershell",
-      "args": [
-        "-NoLogo","-ExecutionPolicy","Bypass","-Command",
-        "cd '$env:USERPROFILE/source/repos/intel_avb/lib'; ./test_minimal.bat"
-      ],
-      "group": "test",
-      "problemMatcher": []
-    },
-    {
-      "label": "Intel AVB: Simple Test", 
-      "type": "shell",
-      "command": "powershell",
-      "args": [
-        "-NoLogo","-ExecutionPolicy","Bypass","-Command",
-        "cd '$env:USERPROFILE/source/repos/intel_avb/lib'; ./test_simple.bat"
-      ],
-      "group": "test",
-      "problemMatcher": []
-    },
-    {
-      "label": "Intel AVB: Probe Test", 
-      "type": "shell",
-      "command": "powershell",
-      "args": [
-        "-NoLogo","-ExecutionPolicy","Bypass","-Command",
-        "cd '$env:USERPROFILE/source/repos/intel_avb/lib'; ./test_probe.bat"
-      ],
-      "group": "test",
-      "problemMatcher": []
-    },
-    {
-      "label": "Intel AVB: Hardware Test", 
-      "type": "shell",
-      "command": "powershell",
-      "args": [
-        "-NoLogo","-ExecutionPolicy","Bypass","-Command",
-        "cd '$env:USERPROFILE/source/repos/intel_avb/lib'; ./test_hardware.bat"
-      ],
-      "group": "test",
-      "problemMatcher": []
-    }
+    {"label": "Intel AVB: Minimal Test","type": "shell","command": "powershell","args": ["-NoLogo","-ExecutionPolicy","Bypass","-Command","cd '$env:USERPROFILE/source/repos/intel_avb/lib'; ./test_minimal.bat"],"group": "test","problemMatcher": []},
+    {"label": "Intel AVB: Simple Test","type": "shell","command": "powershell","args": ["-NoLogo","-ExecutionPolicy","Bypass","-Command","cd '$env:USERPROFILE/source/repos/intel_avb/lib'; ./test_simple.bat"],"group": "test","problemMatcher": []},
+    {"label": "Intel AVB: Probe Test","type": "shell","command": "powershell","args": ["-NoLogo","-ExecutionPolicy","Bypass","-Command","cd '$env:USERPROFILE/source/repos/intel_avb/lib'; ./test_probe.bat"],"group": "test","problemMatcher": []},
+    {"label": "Intel AVB: Hardware Test","type": "shell","command": "powershell","args": ["-NoLogo","-ExecutionPolicy","Bypass","-Command","cd '$env:USERPROFILE/source/repos/intel_avb/lib'; ./test_hardware.bat"],"group": "test","problemMatcher": []}
   ]
-}{
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"label": "Build Intel AVB (Windows)",
-			"type": "shell",
-			"command": "powershell",
-			"args": [
-				"-NoLogo",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-Command",
-				"cd \"$env:USERPROFILE\\source\\repos\\intel_avb\\lib\"; .\\build_windows.bat"
-			]
-		},
-		{
-			"label": "Run Intel AVB Test",
-			"type": "shell",
-			"command": "powershell",
-			"args": [
-				"-NoLogo",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-Command",
-				"cd \"$env:USERPROFILE\\source\\repos\\intel_avb\\lib\"; if (!(Test-Path build\\test_intel.exe)) { .\\build_windows.bat }; .\\build\\test_intel.exe"
-			]
-		}
-	]
 }
