@@ -8,25 +8,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-
-// Simplified IOCTL definitions - just what we need for testing
-#define AVB_IOCTL_ABI_VERSION 0x00010000u
-
-typedef struct AVB_REQUEST_HEADER {
-    uint32_t abi_version;
-    uint32_t header_size;
-} AVB_REQUEST_HEADER;
-
-// Basic IOCTLs for testing
-#ifndef _NDIS_CONTROL_CODE
-  #define _NDIS_CONTROL_CODE(Request,Method) \
-          CTL_CODE(FILE_DEVICE_PHYSICAL_NETCARD, (Request), (Method), FILE_ANY_ACCESS)
-#endif
-
-#define IOCTL_AVB_INIT_DEVICE           _NDIS_CONTROL_CODE(20, METHOD_BUFFERED)
-#define IOCTL_AVB_GET_DEVICE_INFO       _NDIS_CONTROL_CODE(21, METHOD_BUFFERED)
-#define IOCTL_AVB_READ_REGISTER         _NDIS_CONTROL_CODE(22, METHOD_BUFFERED)
-#define IOCTL_AVB_ENUM_ADAPTERS         _NDIS_CONTROL_CODE(31, METHOD_BUFFERED)
+#include "../include/avb_ioctl.h"  // Include the complete IOCTL definitions
 
 #define AVB_DEVICE_PATH "\\\\.\\IntelAvbFilter"
 
