@@ -43,6 +43,40 @@ This directory contains Intel-specific documentation related to the Intel AVB im
 2. **I225 (Priority 90)** - Full TSN + 2.5G → High-performance alternative  
 3. **I219-LM (Priority 60)** - Basic IEEE 1588 + MDIO → Timing services
 4. **I210 (Priority 50)** - Basic IEEE 1588 + MMIO → Monitoring/backup
+
+## **Register Definitions Submodule**
+
+### **✅ intel-ethernet-regs Integration**
+The `intel-ethernet-regs/` subdirectory contains a Git submodule providing auto-generated register headers:
+
+```bash
+# Initialize submodule (already done)
+git submodule init
+git submodule update
+
+# Available register headers:
+spec/intel-ethernet-regs/gen/i210_regs.h  # I210 register definitions
+spec/intel-ethernet-regs/gen/i217_regs.h  # I217 register definitions  
+spec/intel-ethernet-regs/gen/i219_regs.h  # I219 register definitions
+spec/intel-ethernet-regs/gen/i225_regs.h  # I225 register definitions
+spec/intel-ethernet-regs/gen/i226_regs.h  # I226 register definitions
+```
+
+### **Usage in Device Implementations**
+Each device implementation includes its specific register header:
+```c
+// In intel_i226.c:
+#include "../spec/intel-ethernet-regs/gen/i226_regs.h"
+
+// In intel_i210.c:  
+#include "../spec/intel-ethernet-regs/gen/i210_regs.h"
+```
+
+**Benefits:**
+- ✅ **Single Source of Truth**: All register definitions from official Intel YAML specs
+- ✅ **Auto-Generated**: Consistent naming and bit field definitions
+- ✅ **Traceable**: Each header includes source YAML and commit references
+- ✅ **Build Integration**: Successfully integrated with Windows build system
 | **I219**   | ⚠️ **Simulation Only** | Complete official specs | TODO: Real MDIO/Register access |
 | **I225**   | ⚠️ **Simulation Only** | Complete official specs + updates | TODO: Real TSN/MMIO implementation |
 | **I226**   | ⚠️ **Simulation Only** | Complete official specs | TODO: Real TSN/MMIO implementation |

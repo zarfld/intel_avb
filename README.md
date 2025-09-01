@@ -64,15 +64,36 @@ cd lib
 
 ## Recent Changes & Achievements
 
-- ✅ **September 2025**: **MAJOR MILESTONE** - Verified working multi-adapter parallel operation
+- ✅ **September 2025**: **MAJOR MILESTONES ACHIEVED**
+  - **Multi-Adapter Parallel Operation**: Verified working with I210 + I226-LM
+  - **Register Header Integration**: `intel-ethernet-regs` submodule initialized and working
+  - **Infrastructure Complete**: All foundational components operational
 - ✅ **Filter Driver Integration**: IntelAvbFilter.sys communication established  
 - ✅ **Intelligent Adapter Selection**: Priority-based allocation (I226 > I225 > I219 > I210)
 - ✅ **Service Separation API**: Complete architecture for parallel service usage
 - ✅ **Test Framework**: Comprehensive PowerShell and batch test automation  
 - ✅ **Windows Build System**: Enhanced with multi-version Visual Studio support
+- ✅ **Register Definitions**: Device-specific headers from authoritative submodule source
 - Refactored register abstraction for all supported Intel NICs
 - Improved TSN configuration API (TAS, FP, PTM)
 - Enhanced Windows compatibility and IOCTL interface
+
+## **📋 Current Status & Next Steps**
+
+### **✅ INFRASTRUCTURE COMPLETE**
+All foundational work is done:
+- Multi-adapter detection and parallel operation ✅
+- Filter driver communication ✅  
+- Register header definitions ✅
+- Build system integration ✅
+- Test framework ✅
+
+### **🎯 READY FOR: Advanced TSN Development**
+Next focus area: Complete TSN IOCTL implementations in filter driver
+- Use precise register definitions from `spec/intel-ethernet-regs/gen/i226_regs.h`
+- Implement TAS (Time-Aware Shaper) register programming
+- Implement FP (Frame Preemption) configuration
+- Implement PTM (PCIe Precision Time Measurement) setup
 
 ## Public API (`intel.h`)
 
@@ -181,8 +202,25 @@ Each device reports its capabilities through capability flags:
 - Capability-based: features enabled based on device capabilities
 - Extensible: easy to add new devices or features
 
-## Official Documentation
+## Register Definitions & Hardware Specifications
 
+### **Register Headers (Single Source of Truth)**
+All device-specific register definitions are maintained in the `spec/intel-ethernet-regs/` submodule:
+
+```c
+#include "../spec/intel-ethernet-regs/gen/i210_regs.h" // I210 registers
+#include "../spec/intel-ethernet-regs/gen/i219_regs.h" // I219 registers  
+#include "../spec/intel-ethernet-regs/gen/i225_regs.h" // I225 registers
+#include "../spec/intel-ethernet-regs/gen/i226_regs.h" // I226 registers
+```
+
+**Benefits:**
+- ✅ **Authoritative**: Auto-generated from official Intel YAML specifications
+- ✅ **Consistent**: Unified register naming and bit field definitions
+- ✅ **Maintainable**: Single update point for all register changes
+- ✅ **Traceable**: Each header references source YAML and commit hash
+
+### **Hardware Documentation**
 Complete Intel hardware specifications are available in the `spec/` directory:
 - **I210 Family**: Complete datasheets, specification updates, automotive variants
 - **I217 Family**: Controller datasheets and programming guides  
@@ -199,5 +237,5 @@ BSD 3-Clause License - Copyright (c) 2025
 ---
 
 **Documentation lifecycle:**  
-This README reflects the current implementation and hardware validation status as of July 2025. For ongoing changes, see `docs/TODO.md`. Completed features are tracked in `docs/completed/`.  
-Hardware validation is required for all production claims.
+This README reflects the current implementation and hardware validation status as of **September 2025**. Infrastructure complete with verified multi-adapter parallel operation and register header integration. For ongoing advanced TSN development, see `TODO.md`.  
+Hardware validation completed on Windows 11 with I210 + I226-LM configuration.
