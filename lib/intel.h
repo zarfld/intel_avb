@@ -243,6 +243,12 @@ int intel_setup_time_aware_shaper(device_t *dev, struct tsn_tas_config *config);
 int intel_setup_frame_preemption(device_t *dev, struct tsn_fp_config *config);
 int intel_setup_ptm(device_t *dev, struct ptm_config *config);
 
+/* Phase 2: Enhanced TSN implementations with hardware activation fixes */
+int intel_setup_time_aware_shaper_phase2(device_t *dev, struct tsn_tas_config *config);
+int intel_setup_frame_preemption_phase2(device_t *dev, struct tsn_fp_config *config);
+int intel_setup_ptm_phase2(device_t *dev, struct ptm_config *config);
+int intel_i210_ptp_clock_fix_phase2(device_t *dev);
+
 /* Register Access Functions */
 int intel_read_reg(device_t *dev, uint32_t offset, uint32_t *value);
 int intel_write_reg(device_t *dev, uint32_t offset, uint32_t value);
