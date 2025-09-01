@@ -27,6 +27,10 @@ cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% intel_windows.c /Fo:build\intel_wi
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_realmode.c /Fo:build\test_realmode.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_driver_verification.c /Fo:build\test_driver_verification.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_filter_driver.c /Fo:build\test_filter_driver.obj
+cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_multi_adapter.c /Fo:build\test_multi_adapter.obj
+cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_i226_priority.c /Fo:build\test_i226_priority.obj
+cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_tsn_support.c /Fo:build\test_tsn_support.obj
+cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% demo_parallel_services.c /Fo:build\demo_parallel_services.obj
 
 REM Create static library
 echo Creating static library...
@@ -44,6 +48,10 @@ link /OUT:build\test_intel.exe build\test_intel.obj build\test_intel_common.obj 
 link /OUT:build\test_realmode.exe build\test_realmode.obj
 link /OUT:build\test_driver_verification.exe build\test_driver_verification.obj
 link /OUT:build\test_filter_driver.exe build\test_filter_driver.obj
+link /OUT:build\test_multi_adapter.exe build\test_multi_adapter.obj
+link /OUT:build\test_i226_priority.exe build\test_i226_priority.obj
+link /OUT:build\test_tsn_support.exe build\test_tsn_support.obj
+link /OUT:build\demo_parallel_services.exe build\demo_parallel_services.obj
 
 echo Build complete!
 echo.
@@ -52,6 +60,10 @@ echo   build\intel_avb.lib   - Static library
 echo   build\intel_avb.dll   - Dynamic library  
 echo   build\test_intel.exe      - Simulated API test
 echo   build\test_realmode.exe   - Real IOCTL interface test
-echo   build\test_driver_verification.exe - Driver status verification
+echo   build\test_i226_priority.exe - I226 preference test
+echo   build\test_multi_adapter.exe - Multi-adapter test
+echo   build\test_tsn_support.exe - TSN IOCTL support test
+echo   build\demo_parallel_services.exe - Parallel services demonstration
+echo   build\test_filter_driver.exe - Filter driver test
 echo.
 popd

@@ -33,6 +33,12 @@ struct windows_hw_context {
     DWORD mmio_size;
     BOOL initialized;
     const struct platform_ops *ops;
+    
+    /* Multi-adapter support */
+    uint16_t current_vendor_id;
+    uint16_t current_device_id;
+    uint32_t current_capabilities;
+    int adapter_selected;
 };
 
 /* Forward declarations for platform operations */
@@ -48,6 +54,8 @@ static int windows_read_timestamp(device_t *dev, uint64_t *timestamp);
 static int windows_enum_adapters(device_t *dev, int index, uint32_t *count, uint16_t *vendor_id, uint16_t *device_id, uint32_t *capabilities);
 static int windows_open_adapter(device_t *dev, uint16_t vendor_id, uint16_t device_id);
 static int windows_get_device_info(device_t *dev, char *info_buffer, uint32_t *buffer_size);
+static int windows_select_best_adapter(device_t *dev);
+static int windows_get_adapter_priority(uint16_t device_id);
 
 /* Platform operations structure for Windows NDIS */
 static const struct platform_ops windows_ndis_platform_ops = {
@@ -127,8 +135,20 @@ static int windows_platform_init(device_t *dev)
     
     win_ctx->initialized = TRUE;
     win_ctx->ops = &windows_ndis_platform_ops;
+    win_ctx->adapter_selected = 0;
+    win_ctx->current_vendor_id = 0;
+    win_ctx->current_device_id = 0;
+    win_ctx->current_capabilities = 0;
     priv->platform_data = win_ctx;
-    
+
+    /* Automatically select the best available adapter (prefer I226 > I225 > I219 > I210) */
+    if (windows_select_best_adapter(dev) == WIN_SUCCESS) {
+        printf("Windows HW: Best adapter auto-selected (VID=0x%04x, DID=0x%04x)\n", 
+               win_ctx->current_vendor_id, win_ctx->current_device_id);
+    } else {
+        printf("Windows HW: Warning - No suitable adapter found, manual selection required\n");
+    }
+
     printf("Windows HW: Platform initialized successfully through NDIS filter\n");
     return WIN_SUCCESS;
 }
@@ -689,6 +709,159 @@ static int windows_get_device_info(device_t *dev, char *info_buffer, uint32_t *b
     
     printf("Windows HW: Device info retrieved (%lu bytes)\n", request.buffer_size);
     return WIN_SUCCESS;
+}
+
+/**
+ * @brief Get adapter priority for selection (higher = better)
+ * @param device_id PCI Device ID
+ * @return Priority score (higher is better)
+ */
+static int windows_get_adapter_priority(uint16_t device_id)
+{
+    switch (device_id) {
+        case 0x125B: // I226-LM 
+        case 0x125C: // I226-V
+            return 100; // Highest - full TSN support + 2.5G
+            
+        case 0x15F2: // I225-LM
+        case 0x15F3: // I225-V  
+            return 90;  // High - full TSN support
+            
+        case 0x15B7: // I219-LM
+        case 0x15B8: // I219-V
+            return 60;  // Medium - basic PTP + MDIO
+            
+        case 0x1533: // I210
+            return 50;  // Lower - basic PTP only
+            
+        case 0x153A: // I217-LM
+        case 0x153B: // I217-V
+            return 40;  // Lowest - basic PTP
+            
+        default:
+            return 10;  // Unknown Intel device
+    }
+}
+
+/**
+ * @brief Automatically select the best available adapter (prefer I226 > I225 > I219 > I210)
+ */
+static int windows_select_best_adapter(device_t *dev)
+{
+    struct intel_private *priv;
+    struct windows_hw_context *win_ctx;
+    AVB_ENUM_REQUEST enumReq;
+    DWORD bytesReturned;
+    
+    if (!dev || !dev->private_data) {
+        return WIN_ERROR_ACCESS;
+    }
+    
+    priv = (struct intel_private *)dev->private_data;
+    win_ctx = (struct windows_hw_context *)priv->platform_data;
+    
+    if (!win_ctx || !win_ctx->initialized) {
+        return WIN_ERROR_DEVICE;
+    }
+    
+    printf("Windows HW: Auto-selecting best adapter...\n");
+    
+    /* Get adapter count */
+    memset(&enumReq, 0, sizeof(enumReq));
+    enumReq.index = 0;
+    
+    if (!DeviceIoControl(
+        win_ctx->filter_device_handle,
+        IOCTL_AVB_ENUM_ADAPTERS,
+        &enumReq,
+        sizeof(enumReq),
+        &enumReq,
+        sizeof(enumReq),
+        &bytesReturned,
+        NULL)) {
+        printf("Windows HW: Adapter enumeration failed, Error: %lu\n", GetLastError());
+        return WIN_ERROR_ACCESS;
+    }
+    
+    if (enumReq.count == 0) {
+        printf("Windows HW: No Intel AVB adapters found\n");
+        return WIN_ERROR_DEVICE;
+    }
+    
+    printf("Windows HW: Found %lu Intel adapters, selecting best...\n", (unsigned long)enumReq.count);
+    
+    /* Find the best adapter */
+    int best_priority = -1;
+    uint16_t best_vendor_id = 0;
+    uint16_t best_device_id = 0;
+    uint32_t best_capabilities = 0;
+    
+    for (uint32_t i = 0; i < enumReq.count; i++) {
+        enumReq.index = i;
+        
+        if (DeviceIoControl(
+            win_ctx->filter_device_handle,
+            IOCTL_AVB_ENUM_ADAPTERS,
+            &enumReq,
+            sizeof(enumReq),
+            &enumReq,
+            sizeof(enumReq),
+            &bytesReturned,
+            NULL)) {
+            
+            int priority = windows_get_adapter_priority(enumReq.device_id);
+            
+            printf("Windows HW: Adapter #%lu: VID=0x%04x, DID=0x%04x (", 
+                   (unsigned long)i, enumReq.vendor_id, enumReq.device_id);
+                   
+            switch (enumReq.device_id) {
+                case 0x125B: printf("I226-LM"); break;
+                case 0x125C: printf("I226-V"); break;
+                case 0x15F2: printf("I225-LM"); break;
+                case 0x15F3: printf("I225-V"); break;
+                case 0x15B7: printf("I219-LM"); break;
+                case 0x15B8: printf("I219-V"); break;
+                case 0x1533: printf("I210"); break;
+                case 0x153A: printf("I217-LM"); break;
+                default: printf("Unknown"); break;
+            }
+            printf("), Priority=%d, Caps=0x%08lx\n", priority, (unsigned long)enumReq.capabilities);
+            
+            if (priority > best_priority) {
+                best_priority = priority;
+                best_vendor_id = enumReq.vendor_id;
+                best_device_id = enumReq.device_id;
+                best_capabilities = enumReq.capabilities;
+            }
+        }
+    }
+    
+    if (best_priority > 0) {
+        /* Select the best adapter */
+        if (windows_open_adapter(dev, best_vendor_id, best_device_id) == WIN_SUCCESS) {
+            win_ctx->current_vendor_id = best_vendor_id;
+            win_ctx->current_device_id = best_device_id;
+            win_ctx->current_capabilities = best_capabilities;
+            win_ctx->adapter_selected = 1;
+            
+            printf("Windows HW: ✅ Selected ");
+            switch (best_device_id) {
+                case 0x125B: case 0x125C: printf("I226 (Full TSN + 2.5G)"); break;
+                case 0x15F2: case 0x15F3: printf("I225 (Full TSN)"); break;
+                case 0x15B7: case 0x15B8: printf("I219 (Basic PTP + MDIO)"); break;
+                case 0x1533: printf("I210 (Basic PTP)"); break;
+                default: printf("Intel adapter"); break;
+            }
+            printf(" as primary adapter\n");
+            
+            return WIN_SUCCESS;
+        } else {
+            printf("Windows HW: Failed to open best adapter\n");
+            return WIN_ERROR_DEVICE;
+        }
+    }
+    
+    return WIN_ERROR_DEVICE;
 }
 
 /* Note: platform ops getter defined earlier (windows_ndis_platform_ops). */
