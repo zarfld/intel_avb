@@ -26,6 +26,7 @@ cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% intel_i225.c /Fo:build\intel_i225.
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% intel_windows.c /Fo:build\intel_windows.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_realmode.c /Fo:build\test_realmode.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_driver_verification.c /Fo:build\test_driver_verification.obj
+cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_filter_driver.c /Fo:build\test_filter_driver.obj
 
 REM Create static library
 echo Creating static library...
@@ -42,6 +43,7 @@ cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% intel_common.c /Fo:build\test_inte
 link /OUT:build\test_intel.exe build\test_intel.obj build\test_intel_common.obj build\intel_avb.lib build\intel_windows.obj
 link /OUT:build\test_realmode.exe build\test_realmode.obj
 link /OUT:build\test_driver_verification.exe build\test_driver_verification.obj
+link /OUT:build\test_filter_driver.exe build\test_filter_driver.obj
 
 echo Build complete!
 echo.
