@@ -32,6 +32,7 @@ cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_multi_adapter.c /Fo:build\tes
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_i226_priority.c /Fo:build\test_i226_priority.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_tsn_support.c /Fo:build\test_tsn_support.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% demo_parallel_services.c /Fo:build\demo_parallel_services.obj
+cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_service_direct.c /Fo:build\test_service_direct.obj
 
 REM Create static library
 echo Creating static library...
@@ -53,6 +54,7 @@ link /OUT:build\test_multi_adapter.exe build\test_multi_adapter.obj
 link /OUT:build\test_i226_priority.exe build\test_i226_priority.obj
 link /OUT:build\test_tsn_support.exe build\test_tsn_support.obj
 link /OUT:build\demo_parallel_services.exe build\demo_parallel_services.obj
+link /OUT:build\test_service_direct.exe build\test_service_direct.obj
 
 echo Build complete!
 echo.
@@ -64,7 +66,8 @@ echo   build\test_realmode.exe   - Real IOCTL interface test
 echo   build\test_i226_priority.exe - I226 preference test
 echo   build\test_multi_adapter.exe - Multi-adapter test
 echo   build\test_tsn_support.exe - TSN IOCTL support test
-echo   build\demo_parallel_services.exe - Parallel services demonstration
+echo   build\demo_parallel_services.exe - Parallel services demonstration  
+echo   build\test_service_direct.exe - Direct service allocation test
 echo   build\test_filter_driver.exe - Filter driver test
 echo.
 popd
