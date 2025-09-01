@@ -13,8 +13,8 @@ extern "C" {
 #define AVB_IOCTL_ABI_VERSION 0x00010000u
 
 /* Bring in SSOT TSN/PTM types */
-/* Relative include path (header lives in include/, external path is sibling) */
-#include "../external/intel_avb/lib/intel.h"
+/* Relative include path (header lives in include/, lib path is sibling) */
+#include "../lib/intel.h"
 
 /* Basic fixed-width types for UM/KM */
 #if defined(_KERNEL_MODE)
