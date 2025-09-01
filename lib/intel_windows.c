@@ -314,9 +314,6 @@ static int windows_mmio_read(device_t *dev, uint32_t offset, uint32_t *value)
 }
 
 /**
- * @brief Write MMIO register (simulation for I219 MDIO access)
- */
-/**
  * @brief Write MMIO register through NDIS filter
  */
 static int windows_mmio_write(device_t *dev, uint32_t offset, uint32_t value)
