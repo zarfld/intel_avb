@@ -45,6 +45,9 @@ static int windows_mmio_write(device_t *dev, uint32_t offset, uint32_t value);
 static int windows_mdio_read(device_t *dev, uint16_t phy_addr, uint16_t reg_addr, uint16_t *value);
 static int windows_mdio_write(device_t *dev, uint16_t phy_addr, uint16_t reg_addr, uint16_t value);
 static int windows_read_timestamp(device_t *dev, uint64_t *timestamp);
+static int windows_enum_adapters(device_t *dev, int index, uint32_t *count, uint16_t *vendor_id, uint16_t *device_id, uint32_t *capabilities);
+static int windows_open_adapter(device_t *dev, uint16_t vendor_id, uint16_t device_id);
+static int windows_get_device_info(device_t *dev, char *info_buffer, uint32_t *buffer_size);
 
 /* Platform operations structure for Windows NDIS */
 static const struct platform_ops windows_ndis_platform_ops = {
@@ -521,6 +524,170 @@ static int windows_read_timestamp(device_t *dev, uint64_t *timestamp)
     *timestamp = request.timestamp;
     
     printf("Windows HW: Timestamp: 0x%016llx\n", *timestamp);
+    return WIN_SUCCESS;
+}
+
+/**
+ * @brief Enumerate available adapters using filter driver
+ */
+static int windows_enum_adapters(device_t *dev, int index, uint32_t *count, uint16_t *vendor_id, uint16_t *device_id, uint32_t *capabilities)
+{
+    struct intel_private *priv;
+    struct windows_hw_context *win_ctx;
+    AVB_ENUM_REQUEST request;
+    DWORD bytesReturned;
+    
+    if (!dev || !dev->private_data) {
+        return WIN_ERROR_ACCESS;
+    }
+    
+    priv = (struct intel_private *)dev->private_data;
+    win_ctx = (struct windows_hw_context *)priv->platform_data;
+    
+    if (!win_ctx || !win_ctx->initialized) {
+        return WIN_ERROR_DEVICE;
+    }
+    
+    printf("Windows HW: Enumerating adapters (index: %d)...\n", index);
+    
+    request.index = index;
+    request.count = 0;
+    request.vendor_id = 0;
+    request.device_id = 0;
+    request.capabilities = 0;
+    request.status = 0;
+    
+    if (!DeviceIoControl(
+        win_ctx->filter_device_handle,
+        IOCTL_AVB_ENUM_ADAPTERS,
+        &request,
+        sizeof(request),
+        &request,
+        sizeof(request),
+        &bytesReturned,
+        NULL)) {
+        printf("Windows HW: Adapter enumeration failed, Error: %lu\n", GetLastError());
+        return WIN_ERROR_ACCESS;
+    }
+    
+    if (request.status != 0) {
+        printf("Windows HW: Adapter enumeration failed, Status: 0x%lx\n", request.status);
+        return WIN_ERROR_DEVICE;
+    }
+    
+    if (count) *count = request.count;
+    if (vendor_id) *vendor_id = request.vendor_id;  
+    if (device_id) *device_id = request.device_id;
+    if (capabilities) *capabilities = request.capabilities;
+    
+    printf("Windows HW: Found %lu adapters, VID=0x%04x, DID=0x%04x, Caps=0x%08lx\n", 
+           request.count, request.vendor_id, request.device_id, request.capabilities);
+    
+    return WIN_SUCCESS;
+}
+
+/**
+ * @brief Open specific adapter using filter driver  
+ */
+static int windows_open_adapter(device_t *dev, uint16_t vendor_id, uint16_t device_id)
+{
+    struct intel_private *priv;
+    struct windows_hw_context *win_ctx;
+    AVB_OPEN_REQUEST request;
+    DWORD bytesReturned;
+    
+    if (!dev || !dev->private_data) {
+        return WIN_ERROR_ACCESS;
+    }
+    
+    priv = (struct intel_private *)dev->private_data;
+    win_ctx = (struct windows_hw_context *)priv->platform_data;
+    
+    if (!win_ctx || !win_ctx->initialized) {
+        return WIN_ERROR_DEVICE;
+    }
+    
+    printf("Windows HW: Opening adapter VID=0x%04x, DID=0x%04x...\n", vendor_id, device_id);
+    
+    request.vendor_id = vendor_id;
+    request.device_id = device_id;
+    request.reserved = 0;
+    request.status = 0;
+    
+    if (!DeviceIoControl(
+        win_ctx->filter_device_handle,
+        IOCTL_AVB_OPEN_ADAPTER,
+        &request,
+        sizeof(request),
+        &request,  
+        sizeof(request),
+        &bytesReturned,
+        NULL)) {
+        printf("Windows HW: Adapter open failed, Error: %lu\n", GetLastError());
+        return WIN_ERROR_ACCESS;
+    }
+    
+    if (request.status != 0) {
+        printf("Windows HW: Adapter open failed, Status: 0x%lx\n", request.status);
+        return WIN_ERROR_DEVICE;
+    }
+    
+    printf("Windows HW: Adapter opened successfully\n");
+    return WIN_SUCCESS;
+}
+
+/**
+ * @brief Get device information using filter driver
+ */
+static int windows_get_device_info(device_t *dev, char *info_buffer, uint32_t *buffer_size)
+{
+    struct intel_private *priv;
+    struct windows_hw_context *win_ctx;
+    AVB_DEVICE_INFO_REQUEST request;
+    DWORD bytesReturned;
+    
+    if (!dev || !dev->private_data || !info_buffer || !buffer_size) {
+        return WIN_ERROR_ACCESS;
+    }
+    
+    priv = (struct intel_private *)dev->private_data;
+    win_ctx = (struct windows_hw_context *)priv->platform_data;
+    
+    if (!win_ctx || !win_ctx->initialized) {
+        return WIN_ERROR_DEVICE;
+    }
+    
+    printf("Windows HW: Getting device information...\n");
+    
+    memset(&request, 0, sizeof(request));
+    request.buffer_size = *buffer_size;
+    request.status = 0;
+    
+    if (!DeviceIoControl(
+        win_ctx->filter_device_handle,
+        IOCTL_AVB_GET_DEVICE_INFO,
+        &request,
+        sizeof(request),
+        &request,
+        sizeof(request),
+        &bytesReturned,
+        NULL)) {
+        printf("Windows HW: Device info query failed, Error: %lu\n", GetLastError());
+        return WIN_ERROR_ACCESS;
+    }
+    
+    if (request.status != 0) {
+        printf("Windows HW: Device info query failed, Status: 0x%lx\n", request.status);
+        return WIN_ERROR_DEVICE;
+    }
+    
+    // Copy information to user buffer
+    size_t copy_size = min(request.buffer_size, *buffer_size - 1);
+    memcpy(info_buffer, request.device_info, copy_size);
+    info_buffer[copy_size] = '\0';
+    *buffer_size = request.buffer_size;
+    
+    printf("Windows HW: Device info retrieved (%lu bytes)\n", request.buffer_size);
     return WIN_SUCCESS;
 }
 
