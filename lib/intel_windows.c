@@ -864,4 +864,82 @@ static int windows_select_best_adapter(device_t *dev)
     return WIN_ERROR_DEVICE;
 }
 
+/**
+ * @brief Public wrapper for Windows adapter enumeration
+ * @param index Adapter index to query (0..N-1) 
+ * @param count Output: total number of adapters found
+ * @param vendor_id Output: vendor ID of the adapter
+ * @param device_id Output: device ID of the adapter
+ * @param capabilities Output: capability flags of the adapter
+ * @return 0 on success, negative error code on failure
+ */
+int intel_windows_enum_adapters(int index, uint32_t *count, uint16_t *vendor_id, uint16_t *device_id, uint32_t *capabilities)
+{
+    HANDLE filter_handle;
+    AVB_ENUM_REQUEST request;
+    DWORD bytesReturned;
+
+    if (!count || !vendor_id || !device_id || !capabilities) {
+        return -EINVAL;
+    }
+    
+    /* Try to open the filter device directly */
+    filter_handle = CreateFile(
+        L"\\\\.\\IntelAvbFilter",
+        GENERIC_READ | GENERIC_WRITE,
+        0,
+        NULL,
+        OPEN_EXISTING,
+        0,
+        NULL
+    );
+    
+    if (filter_handle == INVALID_HANDLE_VALUE) {
+        printf("Windows enumeration: Failed to open AVB filter device. Error: %lu\n", GetLastError());
+        return -ENODEV;
+    }
+    
+    /* Prepare enumeration request */
+    request.index = index;
+    request.count = 0;
+    request.vendor_id = 0;
+    request.device_id = 0;
+    request.capabilities = 0;
+    request.status = 0;
+    
+    /* Execute enumeration IOCTL */
+    if (!DeviceIoControl(
+        filter_handle,
+        IOCTL_AVB_ENUM_ADAPTERS,
+        &request,
+        sizeof(request),
+        &request,
+        sizeof(request),
+        &bytesReturned,
+        NULL)) {
+        printf("Windows enumeration: IOCTL failed, Error: %lu\n", GetLastError());
+        CloseHandle(filter_handle);
+        return -EIO;
+    }
+    
+    if (request.status != 0) {
+        printf("Windows enumeration: Request failed, Status: 0x%lx\n", request.status);
+        CloseHandle(filter_handle);
+        return -EIO;
+    }
+    
+    /* Return results */
+    *count = request.count;
+    *vendor_id = request.vendor_id;
+    *device_id = request.device_id;
+    *capabilities = request.capabilities;
+    
+    CloseHandle(filter_handle);
+    
+    printf("Windows enumeration: Found %u adapters, current: VID=0x%04x, DID=0x%04x, Caps=0x%08x\n",
+           *count, *vendor_id, *device_id, *capabilities);
+    
+    return 0;
+}
+
 /* Note: platform ops getter defined earlier (windows_ndis_platform_ops). */

@@ -53,6 +53,9 @@ struct platform_ops {
 /* Get Windows platform operations */
 const struct platform_ops *intel_get_windows_platform_ops(void);
 
+/* Windows adapter enumeration function */
+int intel_windows_enum_adapters(int index, uint32_t *count, uint16_t *vendor_id, uint16_t *device_id, uint32_t *capabilities);
+
 /* I219 specific register definitions */
 #define I219_REG_CTRL           0x0000  /* Device Control */
 #define I219_REG_STATUS         0x0008  /* Device Status */

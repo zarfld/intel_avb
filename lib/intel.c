@@ -46,6 +46,9 @@
 
 #include "intel.h"
 #include "intel_private.h"
+#ifdef _WIN32
+#include "intel_windows.h"
+#endif
 
 /**
  * @brief Attach to an Intel device
@@ -175,6 +178,33 @@ int intel_detach(device_t *dev)
     intel_common_cleanup(dev);
     
     return 0;
+}
+
+/**
+ * @brief Enumerate Intel AVB adapters
+ * @param dev Temporary device structure for IOCTL operations
+ * @param index Adapter index to query (0..N-1)
+ * @param count Output: total number of adapters found
+ * @param vendor_id Output: vendor ID of the adapter
+ * @param device_id Output: device ID of the adapter  
+ * @param capabilities Output: capability flags of the adapter
+ * @return 0 on success, negative error code on failure
+ */
+int intel_enum_adapters(device_t *dev, int index, uint32_t *count, 
+                       uint16_t *vendor_id, uint16_t *device_id, uint32_t *capabilities)
+{
+    if (!count || !vendor_id || !device_id || !capabilities) {
+        return -EINVAL;
+    }
+    
+#ifdef _WIN32
+    /* Use Windows-specific enumeration */
+    return intel_windows_enum_adapters(index, count, vendor_id, device_id, capabilities);
+#else
+    /* Linux/UNIX platform enumeration would go here */
+    *count = 0;
+    return -ENOTSUP;
+#endif
 }
 
 /**

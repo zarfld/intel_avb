@@ -215,6 +215,7 @@ int intel_attach(char *dev_path, device_t *pdev);
 int intel_attach_rx(device_t *pdev);
 int intel_attach_tx(device_t *pdev);
 int intel_detach(device_t *dev);
+int intel_enum_adapters(device_t *dev, int index, uint32_t *count, uint16_t *vendor_id, uint16_t *device_id, uint32_t *capabilities);
 int intel_init(device_t *dev);
 
 /* Memory Management */
@@ -257,7 +258,6 @@ const char *intel_get_device_name(device_t *dev);
 int intel_has_capability(device_t *dev, uint32_t capability);
 
 /* Multi-Adapter Management */
-int intel_enum_adapters(device_t *dev, int index, uint32_t *count, uint16_t *vendor_id, uint16_t *device_id, uint32_t *capabilities);
 int intel_select_adapter(device_t *dev, uint16_t vendor_id, uint16_t device_id);
 int intel_select_best_adapter(device_t *dev);
 int intel_get_current_adapter(device_t *dev, uint16_t *vendor_id, uint16_t *device_id, uint32_t *capabilities);

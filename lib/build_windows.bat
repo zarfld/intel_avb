@@ -23,6 +23,7 @@ cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% intel_i210.c /Fo:build\intel_i210.
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% intel_i217.c /Fo:build\intel_i217.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% intel_i219.c /Fo:build\intel_i219.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% intel_i225.c /Fo:build\intel_i225.obj
+cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% intel_multi_adapter.c /Fo:build\intel_multi_adapter.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% intel_windows.c /Fo:build\intel_windows.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_realmode.c /Fo:build\test_realmode.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_driver_verification.c /Fo:build\test_driver_verification.obj
@@ -34,11 +35,11 @@ cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% demo_parallel_services.c /Fo:build
 
 REM Create static library
 echo Creating static library...
-lib /OUT:build\intel_avb.lib build\intel.obj build\intel_common.obj build\intel_i210.obj build\intel_i217.obj build\intel_i219.obj build\intel_i225.obj build\intel_windows.obj
+lib /OUT:build\intel_avb.lib build\intel.obj build\intel_common.obj build\intel_i210.obj build\intel_i217.obj build\intel_i219.obj build\intel_i225.obj build\intel_multi_adapter.obj build\intel_windows.obj
 
 REM Create DLL
 echo Creating dynamic library...
-link /DLL /OUT:build\intel_avb.dll build\intel.obj build\intel_common.obj build\intel_i210.obj build\intel_i217.obj build\intel_i219.obj build\intel_i225.obj build\intel_windows.obj
+link /DLL /OUT:build\intel_avb.dll build\intel.obj build\intel_common.obj build\intel_i210.obj build\intel_i217.obj build\intel_i219.obj build\intel_i225.obj build\intel_multi_adapter.obj build\intel_windows.obj
 
 REM Compile test program
 echo Compiling test program...
@@ -46,7 +47,7 @@ cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_intel.c /Fo:build\test_intel.
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% intel_common.c /Fo:build\test_intel_common.obj
 link /OUT:build\test_intel.exe build\test_intel.obj build\test_intel_common.obj build\intel_avb.lib build\intel_windows.obj
 link /OUT:build\test_realmode.exe build\test_realmode.obj
-link /OUT:build\test_driver_verification.exe build\test_driver_verification.obj
+link /OUT:build\test_driver_verification.exe build\test_driver_verification.obj advapi32.lib
 link /OUT:build\test_filter_driver.exe build\test_filter_driver.obj
 link /OUT:build\test_multi_adapter.exe build\test_multi_adapter.obj
 link /OUT:build\test_i226_priority.exe build\test_i226_priority.obj
