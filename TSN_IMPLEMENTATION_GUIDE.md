@@ -254,8 +254,8 @@ Intel I210 AVB Validation:
 
 ## 🚨 **Filter Driver Enhancement Requirements** (External Dependency)
 
-**Current Status**: Basic IOCTLs working ✅, Advanced TSN IOCTLs need implementation ⚠️  
-**Required for Full TSN**: Complete implementation of TSN-specific IOCTLs in filter driver
+**Current Status**: Basic IOCTLs working ✅, Basic PTP working ✅, Advanced TSN IOCTLs need implementation ⚠️  
+**Required for Full TSN**: Complete implementation of advanced TSN-specific IOCTLs in filter driver
 
 **📋 COMPREHENSIVE SPECIFICATION AVAILABLE**: See **[FILTER_DRIVER_REQUIREMENTS.md](FILTER_DRIVER_REQUIREMENTS.md)** for complete technical specification including:
 - Detailed IOCTL definitions with data structures

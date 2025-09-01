@@ -13,7 +13,9 @@ This document specifies required enhancements to `IntelAvbFilter.sys` to support
 - ✅ **Working**: Basic IOCTL communication (`IOCTL_AVB_READ_REGISTER`, `IOCTL_AVB_WRITE_REGISTER`)
 - ✅ **Working**: Device enumeration (`IOCTL_AVB_ENUM_ADAPTERS`)
 - ✅ **Working**: Credit-based shaper setup (`IOCTL_AVB_SETUP_QAV`)
-- ❌ **Missing**: Advanced TSN features (TAS, Frame Preemption, Enhanced Timestamping)
+- ✅ **Working**: Basic PTP timestamping (`IOCTL_AVB_GET_TIMESTAMP`, `IOCTL_AVB_SET_TIMESTAMP`)
+- ❌ **Missing**: Advanced TSN features (TAS, Frame Preemption)
+- ❌ **Missing**: Enhanced precision timestamping (nanosecond accuracy, stream correlation)
 - ❌ **Missing**: Event notification and subscription mechanism
 
 ---
@@ -110,14 +112,17 @@ typedef struct {
 ---
 
 ### **Priority 3: Enhanced Hardware Timestamping** ⭐ **MEDIUM PRIORITY**
+*(Note: Basic PTP timestamping already working via `IOCTL_AVB_GET_TIMESTAMP`/`IOCTL_AVB_SET_TIMESTAMP`)*
 
 #### **Use Case**: Precision gPTP Synchronization and AVB Stream Alignment
-Enhanced timestamping provides nanosecond-precision timestamps for gPTP synchronization and AVB stream sample alignment across multiple devices.
+Enhanced timestamping provides **nanosecond-precision timestamps** for gPTP synchronization and AVB stream sample alignment across multiple devices, **beyond the basic PTP functionality currently available**.
 
 #### **Business Requirement**:
 - Multi-room audio systems require sample-accurate synchronization
-- Professional recording requires precise timestamp correlation
+- Professional recording requires precise timestamp correlation  
 - Industrial automation needs deterministic timing validation
+- Current basic PTP: ✅ Working but limited precision
+- **Enhancement needed**: Nanosecond precision, stream packet correlation, multiple timestamp types
 
 #### **Proposed IOCTL**: `IOCTL_AVB_ENHANCED_TIMESTAMP`
 
