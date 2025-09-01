@@ -1,39 +1,62 @@
-# Intel AVB Register Abstraction Layer
+# Intel AVB Hardware Abstraction Layer
 
-This directory provides Intel-specific AVB/TSN register access and hardware abstraction for OpenAvnu, supporting I210/I219/I225/I226 Ethernet controllers. It implements direct register access, timestamping, and TSN feature configuration for real-time media streaming.
+**Status**: **FRAMEWORK COMPLETE** - Reference implementation for AVB stack development  
+**Date**: September 1, 2025  
 
-## **✅ VERIFIED WORKING STATUS** (September 2025)
+This repository provides a **hardware abstraction framework** for Intel AVB/TSN controllers with register access patterns, demonstration code, and comprehensive documentation for building production AVB stack implementations.
 
-### **🎯 Multi-Adapter Parallel Operation CONFIRMED**
-✅ **Both adapters detected and operational**: I210 + I226-LM  
-✅ **Intelligent priority selection**: I226 auto-selected for optimal TSN performance  
-✅ **Service separation architecture**: Multiple services can use dedicated adapters  
-✅ **Filter driver integration**: IOCTL communication working via IntelAvbFilter.sys  
-✅ **Parallel access capability**: Both adapters accessible simultaneously  
+## **�️ FRAMEWORK STATUS** - Reference Implementation
 
-### **Hardware Configuration (Tested)**
-- **Primary**: Intel I226-LM (0x125B) - Full TSN + 2.5G + PCIe PTM
-- **Secondary**: Intel I210 (0x1533) - Basic PTP + MMIO access  
-- **Platform**: Windows 11 with Visual Studio 2022
+### **✅ Hardware Abstraction Framework**
+- **Multi-Adapter Support**: Framework for I210/I217/I219/I225/I226 controllers
+- **Service Architecture**: Demonstration patterns for intelligent adapter allocation  
+- **OpenAvnu Compatibility**: Interface layer and data structures for gPTP integration
+- **Windows Platform**: IOCTL interface definitions and communication patterns
 
-## Supported Devices & Current Status
+### **✅ Comprehensive Documentation**
+- **[TSN_IMPLEMENTATION_GUIDE.md](TSN_IMPLEMENTATION_GUIDE.md)**: Complete TSN register programming sequences
+- **[ARCHITECTURE.md](ARCHITECTURE.md)**: Framework architecture and integration patterns  
+- **[FILTER_DRIVER_REQUIREMENTS.md](FILTER_DRIVER_REQUIREMENTS.md)**: Comprehensive specification for filter driver enhancements
+- **[STATUS.md](STATUS.md)**: Implementation framework status
+- **[VERIFICATION_RESULTS.md](VERIFICATION_RESULTS.md)**: Framework validation and hardware testing results
 
-| Device      | Features                                  | API Status                | Hardware Access Status        | Priority Score |
-|-------------|-------------------------------------------|---------------------------|-------------------------------|----------------|
-| **I226-LM** | TSN (TAS, FP, PTM), gPTP, 2.5G, MMIO    | ✅ **Production Ready**   | ✅ **Working via Filter Driver** | **100** (Best) |
-| **I225**    | TSN (TAS, FP, PTM), gPTP, 2.5G, MMIO    | ✅ **API Complete**       | ⚠️ **Filter Driver Ready**     | 90  |
-| **I219-LM** | MDIO, IEEE 1588 timestamping            | ✅ **API Complete**       | ✅ **Simulated/Filter Ready**   | 60  |
-| **I210**    | MMIO, IEEE 1588 timestamping            | ✅ **Production Ready**   | ✅ **Working via Filter Driver** | 50  |
+### **⚠️ Important Notes: Reference Implementation**
+- This repository provides **demonstration code and framework patterns** - not production services
+- **Filter Driver Enhancements Required**: See FILTER_DRIVER_REQUIREMENTS.md for advanced TSN features
+- Production AVB stack implementation is intended for separate repository using these patterns
 
-### **🏆 Service Allocation Strategy**
-Services automatically get optimal adapters based on requirements:
-- **TSN Audio/Video**: → I226-LM (Full TSN capabilities)  
-- **PTP Synchronization**: → Available PTP-capable adapter  
-- **Network Monitoring**: → I210 (Basic operations)  
+---
 
-**PROVEN**: Multiple services can operate in parallel without interference!
+## **🏗️ Hardware Abstraction Framework**
 
-## **🚀 Quick Start & Testing**
+### **Framework Architecture** (Demonstration Implementation)
+
+```
+Hardware Access Framework:
+├── Device Detection    → Framework patterns for I210/I217/I219/I225/I226
+├── Service Allocation  → Demonstration patterns (not production services)
+├── Register Access     → IOCTL interface patterns via IntelAvbFilter.sys
+└── OpenAvnu Interface  → Compatibility layer for gPTP integration
+
+Note: Service implementations are demonstration code for reference
+```
+
+### **Device Support Framework**
+
+| Device      | Register Access | Framework Status | Notes |
+|-------------|----------------|------------------|-------|
+| **I226-LM** | Auto-generated headers | ✅ **Framework Complete** | TSN register patterns |
+| **I225**    | Auto-generated headers | ✅ **Framework Complete** | TSN register patterns |
+| **I219-LM** | Auto-generated headers | ✅ **Framework Complete** | Basic register patterns |
+| **I210**    | Auto-generated headers | ✅ **Framework Complete** | AVB register patterns |
+
+**Hardware Access**: Requires proper Windows deployment (admin privileges + IntelAvbFilter.sys)
+
+---
+
+## **🚀 Quick Start for Framework Usage**
+
+### **Build Framework and Examples**
 
 ### **Test Your System**
 ```batch
