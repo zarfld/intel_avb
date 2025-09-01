@@ -25,6 +25,7 @@ cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% intel_i219.c /Fo:build\intel_i219.
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% intel_i225.c /Fo:build\intel_i225.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% intel_multi_adapter.c /Fo:build\intel_multi_adapter.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% intel_windows.c /Fo:build\intel_windows.obj
+cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% intel_gptp_service.c /Fo:build\intel_gptp_service.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_realmode.c /Fo:build\test_realmode.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_driver_verification.c /Fo:build\test_driver_verification.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_filter_driver.c /Fo:build\test_filter_driver.obj
@@ -33,14 +34,16 @@ cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_i226_priority.c /Fo:build\tes
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_tsn_support.c /Fo:build\test_tsn_support.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% demo_parallel_services.c /Fo:build\demo_parallel_services.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_service_direct.c /Fo:build\test_service_direct.obj
+cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_openavnu_gptp.c /Fo:build\test_openavnu_gptp.obj
+cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_openavnu_integration.c /Fo:build\test_openavnu_integration.obj
 
 REM Create static library
 echo Creating static library...
-lib /OUT:build\intel_avb.lib build\intel.obj build\intel_common.obj build\intel_i210.obj build\intel_i217.obj build\intel_i219.obj build\intel_i225.obj build\intel_multi_adapter.obj build\intel_windows.obj
+lib /OUT:build\intel_avb.lib build\intel.obj build\intel_common.obj build\intel_i210.obj build\intel_i217.obj build\intel_i219.obj build\intel_i225.obj build\intel_multi_adapter.obj build\intel_windows.obj build\intel_gptp_service.obj
 
 REM Create DLL
 echo Creating dynamic library...
-link /DLL /OUT:build\intel_avb.dll build\intel.obj build\intel_common.obj build\intel_i210.obj build\intel_i217.obj build\intel_i219.obj build\intel_i225.obj build\intel_multi_adapter.obj build\intel_windows.obj
+link /DLL /OUT:build\intel_avb.dll build\intel.obj build\intel_common.obj build\intel_i210.obj build\intel_i217.obj build\intel_i219.obj build\intel_i225.obj build\intel_multi_adapter.obj build\intel_windows.obj build\intel_gptp_service.obj
 
 REM Compile test program
 echo Compiling test program...
@@ -55,6 +58,8 @@ link /OUT:build\test_i226_priority.exe build\test_i226_priority.obj
 link /OUT:build\test_tsn_support.exe build\test_tsn_support.obj
 link /OUT:build\demo_parallel_services.exe build\demo_parallel_services.obj
 link /OUT:build\test_service_direct.exe build\test_service_direct.obj
+link /OUT:build\test_openavnu_gptp.exe build\test_openavnu_gptp.obj build\intel_gptp_service.obj build\intel_avb.lib
+link /OUT:build\test_openavnu_integration.exe build\test_openavnu_integration.obj
 
 echo Build complete!
 echo.
@@ -68,6 +73,8 @@ echo   build\test_multi_adapter.exe - Multi-adapter test
 echo   build\test_tsn_support.exe - TSN IOCTL support test
 echo   build\demo_parallel_services.exe - Parallel services demonstration  
 echo   build\test_service_direct.exe - Direct service allocation test
+echo   build\test_openavnu_gptp.exe - OpenAvnu gPTP integration test
+echo   build\test_openavnu_integration.exe - OpenAvnu integration summary
 echo   build\test_filter_driver.exe - Filter driver test
 echo.
 popd
