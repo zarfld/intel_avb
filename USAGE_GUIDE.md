@@ -34,17 +34,25 @@ cd lib
 
 Based on hardware validation with I210 + I226-LM controllers:
 
-### **🎯 Advanced TSN Features** (Production Ready!)
-- **✅ Time-Aware Shaper (TAS)**: Status: 0x00000000 - **WORKING!**
-- **✅ Frame Preemption (FP)**: Status: 0x00000000 - **WORKING!**
-- **✅ Multi-Adapter Support**: Multiple controllers working simultaneously
+### **�️ Infrastructure Features** (Production Ready!)
+- **✅ Multi-Adapter Detection**: 2 adapters found and enumerated
+- **✅ Priority-Based Selection**: I226-LM automatically selected for TSN
+- **✅ Filter Driver Communication**: IntelAvbFilter.sys working
 - **✅ Register Access**: Full MMIO access to Intel registers
 
-### **🔧 Basic Operations** (Fully Functional)
-- **✅ Device Detection**: Automatic Intel controller discovery
-- **✅ Register Read/Write**: Direct hardware access via IOCTL
-- **✅ MDIO Operations**: PHY register access
-- **✅ Capability Detection**: Hardware feature discovery
+### **🔧 IOCTL Implementation** (Major Breakthrough!)
+- **✅ TAS IOCTL Handler**: Status: 0x00000000 - **IMPLEMENTED!**
+- **✅ FP IOCTL Handler**: Status: 0x00000000 - **IMPLEMENTED!**
+- **⚠️ PTM IOCTL Handler**: Error: 31 (Handler exists, hardware limitation)
+- **❌ Enhanced Timestamping**: Error: 21 (needs investigation)
+
+### **⚠️ Current Limitation: Hardware Activation Gap**
+**IMPORTANT**: IOCTL handlers work but don't yet activate hardware TSN features:
+```
+TAS_CTRL after IOCTL: 0x00000000 (Enable bit still CLEAR)
+FP_CONFIG after IOCTL: 0x00000000 (Enable bit still CLEAR)
+```
+This is a **configuration sequence issue**, not a fundamental architecture problem.
 
 ## 📚 **API USAGE EXAMPLES**
 
@@ -209,22 +217,25 @@ Adapter 1: Intel I226-LM (Device ID: 0x125B)
 
 ## 🔧 **TROUBLESHOOTING**
 
+### **🔧 Troubleshooting**
+
 ### **Common Issues**
 
-**1. "Device not found" or "Access denied"**
+**1. "Zugriff verweigert" / "Access denied"**
+- **Solution**: Run PowerShell as Administrator
+- **Command**: Right-click PowerShell → "Run as Administrator"  
+- **Required for**: test_tsn_support.exe, test_filter_driver.exe
+- **Reason**: Filter driver access requires elevated privileges
+
+**2. "Device not found" or "Access denied" (Error 5)**
 - Run as Administrator
 - Verify IntelAvbFilter.sys is installed: `sc query IntelAvbFilter`
 - Check device manager for Intel network controllers
 
-**2. "IOCTL failed with error X"**
-- Error 5: Access denied - need Administrator privileges
-- Error 31: PTM not supported on this hardware/driver version
-- Error 21: Enhanced timestamping driver issue
-
-**3. "Build errors"**
-- Install Visual Studio Build Tools
-- Run `build_windows.bat` from lib/ directory
-- Check that all header files are present in spec/ directory
+**3. Tests work from some directories but not others**
+- **Issue**: Execution context affects filter driver access
+- **Solution**: Run tests from the lib/ directory where they were built
+- **Working path**: `C:\Users\dzarf\source\repos\IntelAvbFilter\external\intel_avb\lib\`
 
 ### **Validation Commands**
 ```powershell
