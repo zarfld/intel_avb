@@ -43,7 +43,7 @@ typedef struct {
 
 static int read_register_via_filter(HANDLE hDevice, uint32_t offset, uint32_t *value)
 {
-    avb_read_register_t read_req = {0};
+    AVB_REGISTER_REQUEST read_req = {0};
     DWORD bytesReturned = 0;
     
     read_req.offset = offset;
@@ -53,8 +53,8 @@ static int read_register_via_filter(HANDLE hDevice, uint32_t offset, uint32_t *v
         IOCTL_AVB_READ_REGISTER,
         &read_req,
         sizeof(read_req),
-        value,
-        sizeof(*value), 
+        &read_req,
+        sizeof(read_req), 
         &bytesReturned,
         NULL
     );
@@ -64,25 +64,27 @@ static int read_register_via_filter(HANDLE hDevice, uint32_t offset, uint32_t *v
         return -1;
     }
     
+    *value = read_req.value;
     return 0;
 }
 
 static int setup_fp_via_filter(HANDLE hDevice)
 {
-    avb_setup_fp_t fp_config = {0};
+    AVB_FP_REQUEST fp_config = {0};
     DWORD bytesReturned = 0;
     
     // Configure basic Frame Preemption
-    fp_config.enable = 1;
-    fp_config.preemptable_queues = 0x0F; // Queues 0-3 preemptable
+    fp_config.config.preemptable_queues = 0x0F; // Queues 0-3 preemptable
+    fp_config.config.min_fragment_size = 64;    // Minimum fragment size
+    fp_config.config.verify_disable = 0;        // Enable verification
     
     BOOL result = DeviceIoControl(
         hDevice,
         IOCTL_AVB_SETUP_FP,
         &fp_config,
         sizeof(fp_config),
-        NULL,
-        0,
+        &fp_config,
+        sizeof(fp_config),
         &bytesReturned,
         NULL
     );
@@ -97,19 +99,20 @@ static int setup_fp_via_filter(HANDLE hDevice)
 
 static int setup_ptm_via_filter(HANDLE hDevice)
 {
-    avb_setup_ptm_t ptm_config = {0};
+    AVB_PTM_REQUEST ptm_config = {0};
     DWORD bytesReturned = 0;
     
     // Configure basic PTM
-    ptm_config.enable = 1;
+    ptm_config.config.enabled = 1;
+    ptm_config.config.clock_granularity = 1000; // 1 microsecond
     
     BOOL result = DeviceIoControl(
         hDevice,
         IOCTL_AVB_SETUP_PTM,
         &ptm_config,
         sizeof(ptm_config),
-        NULL,
-        0,
+        &ptm_config,
+        sizeof(ptm_config),
         &bytesReturned,
         NULL
     );
@@ -233,8 +236,11 @@ int main()
     filter_validation_t validation = {0};
     
     // Initialize device
-    avb_init_device_t init_req = {0};
+    AVB_REQUEST_HEADER init_req = {0};
     DWORD bytesReturned = 0;
+    
+    init_req.abi_version = AVB_IOCTL_ABI_VERSION;
+    init_req.header_size = sizeof(AVB_REQUEST_HEADER);
     
     printf("1. Initializing device...\n");
     BOOL result = DeviceIoControl(
