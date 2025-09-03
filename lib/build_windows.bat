@@ -37,6 +37,8 @@ cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_service_direct.c /Fo:build\te
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_openavnu_gptp.c /Fo:build\test_openavnu_gptp.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_openavnu_integration.c /Fo:build\test_openavnu_integration.obj
 cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_advanced_ioctls.c /Fo:build\test_advanced_ioctls.obj
+cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_tsn_hardware_validation.c /Fo:build\test_tsn_hardware_validation.obj
+cl /c /O2 /W3 /D_CRT_SECURE_NO_WARNINGS %INC% test_filter_hardware_validation.c /Fo:build\test_filter_hardware_validation.obj
 
 REM Create static library
 echo Creating static library...
@@ -62,6 +64,8 @@ link /OUT:build\test_service_direct.exe build\test_service_direct.obj
 link /OUT:build\test_openavnu_gptp.exe build\test_openavnu_gptp.obj build\intel_gptp_service.obj build\intel_avb.lib
 link /OUT:build\test_openavnu_integration.exe build\test_openavnu_integration.obj
 link /OUT:build\test_advanced_ioctls.exe build\test_advanced_ioctls.obj
+link /OUT:build\test_tsn_hardware_validation.exe build\test_tsn_hardware_validation.obj build\intel_avb.lib
+link /OUT:build\test_filter_hardware_validation.exe build\test_filter_hardware_validation.obj
 
 echo Build complete!
 echo.
@@ -79,5 +83,7 @@ echo   build\test_openavnu_gptp.exe - OpenAvnu gPTP integration test
 echo   build\test_openavnu_integration.exe - OpenAvnu integration summary
 echo   build\test_filter_driver.exe - Filter driver test
 echo   build\test_advanced_ioctls.exe - Advanced IOCTL verification test
+echo   build\test_tsn_hardware_validation.exe - TSN Hardware validation test
+echo   build\test_filter_hardware_validation.exe - Filter driver hardware validation test
 echo.
 popd
