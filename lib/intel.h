@@ -131,6 +131,7 @@ typedef int clockid_t;
 #define INTEL_CAP_TSN_TAS       (1 << 2)  /* Time Aware Shaper (802.1Qbv) */
 #define INTEL_CAP_TSN_FP        (1 << 3)  /* Frame Preemption (802.1Qbu) */
 #define INTEL_CAP_PCIe_PTM      (1 << 4)  /* PCIe Precision Time Measurement */
+#define INTEL_CAP_PCIE_PTM      INTEL_CAP_PCIe_PTM  /* Alias for compatibility */
 #define INTEL_CAP_2_5G          (1 << 5)  /* 2.5 Gbps support */
 #define INTEL_CAP_MDIO          (1 << 6)  /* MDIO register access */
 #define INTEL_CAP_MMIO          (1 << 7)  /* Memory-mapped I/O */
@@ -143,7 +144,13 @@ typedef enum {
     INTEL_DEVICE_I219,
     INTEL_DEVICE_I225,
     INTEL_DEVICE_I226,
-    INTEL_DEVICE_UNKNOWN
+    INTEL_DEVICE_82575,   /* Intel 82575 Gigabit Ethernet Controller */
+    INTEL_DEVICE_82576,   /* Intel 82576 Gigabit Network Connection */
+    INTEL_DEVICE_82580,   /* Intel 82580 Gigabit Network Connection */
+    INTEL_DEVICE_I350,    /* Intel I350 Gigabit Network Connection */
+    INTEL_DEVICE_I354,    /* Intel I354 Gigabit Backplane Connection */
+    INTEL_DEVICE_UNKNOWN,
+    INTEL_DEVICE_TYPE_MAX  /* Maximum number of device types - must be last */
 } intel_device_type_t;
 
 /* Resource mapping structure */
