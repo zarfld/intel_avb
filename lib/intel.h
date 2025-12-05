@@ -136,6 +136,7 @@ typedef int clockid_t;
 #define INTEL_CAP_MDIO          (1 << 6)  /* MDIO register access */
 #define INTEL_CAP_MMIO          (1 << 7)  /* Memory-mapped I/O */
 #define INTEL_CAP_EEE           (1 << 8)  /* Energy Efficient Ethernet */
+#define INTEL_CAP_PCIE_PTM      (1 << 9)  /* PCIe PTM support */
 
 /* Intel device types */
 typedef enum {
