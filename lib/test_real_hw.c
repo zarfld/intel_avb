@@ -267,8 +267,8 @@ int main() {
     printf("   3. For production use, simulated access is often sufficient\n");
     printf("   4. For timestamping, consider Intel's official APIs\n");
     
-    printf("\nPress any key to exit...\n");
-    getchar();
+    // printf("\nPress any key to exit...\n");
+    // getchar();
     
     return 0;
 }
