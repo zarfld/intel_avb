@@ -92,11 +92,44 @@ struct intel_private {
 #define INTEL_REG_SYSTIML      0x0B600  /* System Time Low */
 #define INTEL_REG_SYSTIMH      0x0B604  /* System Time High */
 #define INTEL_REG_TIMINCA      0x0B608  /* Time Increment Attributes */
+#define INTEL_REG_TSYNCTXCTL   0x0B344  /* TX Timestamp Control */
+#define INTEL_REG_TSYNCRXCTL   0x0B348  /* RX Timestamp Control */
 #define INTEL_REG_TSAUXC       0x0B640  /* Auxiliary Time Stamp Control */
 #define INTEL_REG_TRGTTIML0    0x0B644  /* Target Time Low 0 */
 #define INTEL_REG_TRGTTIMH0    0x0B648  /* Target Time High 0 */
+#define INTEL_REG_TRGTTIML1    0x0B64C  /* Target Time Low 1 */
+#define INTEL_REG_TRGTTIMH1    0x0B650  /* Target Time High 1 */
+#define INTEL_REG_TSICR        0x0B66C  /* Timestamp Interrupt Cause */
+#define INTEL_REG_TSIM         0x0B674  /* Timestamp Interrupt Mask */
 #define INTEL_REG_AUXSTMPL0    0x0B65C  /* Auxiliary Time Stamp Low 0 */
 #define INTEL_REG_AUXSTMPH0    0x0B660  /* Auxiliary Time Stamp High 0 */
+#define INTEL_REG_RXPBSIZE     0x02404  /* RX Packet Buffer Size */
+#define INTEL_REG_SRRCTL0      0x0C00C  /* Split Receive Control Queue 0 (stride: 0x40 per queue) */
+
+/* Time synchronization bit masks */
+#define INTEL_TSAUXC_DISABLE_SYSTIM  0x80000000U /* TSAUXC[31]: set=primary timer disabled */
+#define INTEL_TSAUXC_DISABLE_SYSTIM3 0x20000000U /* TSAUXC[29]: set=timer 3 disabled */
+#define INTEL_TSAUXC_DISABLE_SYSTIM2 0x10000000U /* TSAUXC[28]: set=timer 2 disabled */
+#define INTEL_TSAUXC_DISABLE_SYSTIM1 0x08000000U /* TSAUXC[27]: set=timer 1 disabled */
+#define INTEL_TSYNC_VALID            0x80000000U /* TSYNCTXCTL/TSYNCRXCTL[31]: timestamp ready */
+#define INTEL_TSYNC_TS_MASK          0x7FFFFFFFU /* Strip timestamp valid bit from TXSTMPH */
+#define INTEL_TIMINCA_INCPERIOD      0x0E000000U /* TIMINCA increment period field (bits 28-25) */
+#define INTEL_TIMINCA_DEFAULT        0x18000000U /* Default TIMINCA for 25 MHz clock devices */
+#define INTEL_TIMINCA_SUBNS_MASK     0x00FFFFFFU /* TIMINCA sub-nanosecond fractional bits */
+
+/* PCI / BAR address constants */
+#define INTEL_BAR0_SIZE_128KB    0x00020000U /* 128 KB MMIO BAR size (all supported devices) */
+#define INTEL_PCI_BAR_MMIO_MASK  0xFFFFFFF0U /* BAR address mask (strip PCI type/prefetch bits) */
+
+/* Device-specific TIMINCA initialization values */
+#define INTEL_TIMINCA_I217_INIT   0x08000001U  /* I217: basic 1ns increment (PCH PHY timing) */
+#define INTEL_TIMINCA_I350_INIT   0x80000008U  /* I350: enhanced 8ns increment */
+#define INTEL_TIMINCA_82580_INIT  0x80000006U  /* 82580: enhanced 6ns increment */
+
+/* General bit-width masks */
+#define INTEL_MASK_16BIT         0x0000FFFFU /* Mask to extract/truncate to 16 bits */
+#define INTEL_MASK_32BIT         0xFFFFFFFFU /* Mask to extract low 32 bits; also reg-invalid sentinel */
+#define INTEL_SENTINEL_DEAD_BEEF 0xDEADBEEFU /* Debug / invalid-ID sentinel (never a valid ring handle) */
 
 /* TSN registers (I225/I226 specific)
  * Note: Do not duplicate device-specific TSN/PTM/FP register offsets here.
