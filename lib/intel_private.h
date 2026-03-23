@@ -111,6 +111,10 @@ struct intel_private {
 #define INTEL_TSAUXC_DISABLE_SYSTIM3 0x20000000U /* TSAUXC[29]: set=timer 3 disabled */
 #define INTEL_TSAUXC_DISABLE_SYSTIM2 0x10000000U /* TSAUXC[28]: set=timer 2 disabled */
 #define INTEL_TSAUXC_DISABLE_SYSTIM1 0x08000000U /* TSAUXC[27]: set=timer 1 disabled */
+#define INTEL_TSAUXC_EN_TS1          0x00000400U /* TSAUXC[10]: enable aux timestamp capture 1 */
+#define INTEL_TSAUXC_EN_TS0          0x00000100U /* TSAUXC[8]:  enable aux timestamp capture 0 */
+#define INTEL_TSAUXC_EN_TT1          0x00000010U /* TSAUXC[4]:  enable target time interrupt 1 */
+#define INTEL_TSAUXC_EN_TT0          0x00000001U /* TSAUXC[0]:  enable target time interrupt 0 */
 #define INTEL_TSYNC_VALID            0x80000000U /* TSYNCTXCTL/TSYNCRXCTL[31]: timestamp ready */
 #define INTEL_TSYNC_TS_MASK          0x7FFFFFFFU /* Strip timestamp valid bit from TXSTMPH */
 #define INTEL_TIMINCA_INCPERIOD      0x0E000000U /* TIMINCA increment period field (bits 28-25) */
