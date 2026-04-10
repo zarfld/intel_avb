@@ -126,6 +126,7 @@ struct intel_private {
 #define INTEL_PCI_BAR_MMIO_MASK  0xFFFFFFF0U /* BAR address mask (strip PCI type/prefetch bits) */
 
 /* Device-specific TIMINCA initialization values */
+#define INTEL_TIMINCA_I210_INIT   0x08000000U  /* I210: 8ns per cycle for 125 MHz clock (8 * 2^24 fractional-ns units) */
 #define INTEL_TIMINCA_I217_INIT   0x08000001U  /* I217: basic 1ns increment (PCH PHY timing) */
 #define INTEL_TIMINCA_I350_INIT   0x80000008U  /* I350: enhanced 8ns increment */
 #define INTEL_TIMINCA_82580_INIT  0x80000006U  /* 82580: enhanced 6ns increment */
