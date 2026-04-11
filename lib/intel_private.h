@@ -91,6 +91,9 @@ struct intel_private {
 /* Time synchronization registers */
 #define INTEL_REG_SYSTIML      0x0B600  /* System Time Low */
 #define INTEL_REG_SYSTIMH      0x0B604  /* System Time High */
+#define INTEL_REG_SYSTIMR      0x0B6F8  /* System Time Residue (I210/I211): read latches SYSTIML+SYSTIMH atomically */
+/* Device-specific aliases for registers that share the same offset */
+#define I210_SYSTIMR           INTEL_REG_SYSTIMR  /* I210: SYSTIMR latch trigger (igb_ptp_read_i210) */
 #define INTEL_REG_TIMINCA      0x0B608  /* Time Increment Attributes */
 #define INTEL_REG_TSYNCTXCTL   0x0B344  /* TX Timestamp Control */
 #define INTEL_REG_TSYNCRXCTL   0x0B348  /* RX Timestamp Control */
